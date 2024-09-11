@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Spécifier le répertoire de base
-base_directory = "/media/hleet_user/HDD-EXT/[BlurayDesuYo] Full Metal Panic! Invisible Victory - BD BOX 01 (BD 1920x1080 10bit FLAC)"
+base_directory = "/media/hleet_user/HDD-EXT/[BlurayDesuYo] Full Metal Panic! Invisible Victory - BD BOX 02 (BD 1920x1080 10bit FLAC)"
 
 # Obtenir la liste de tous les fichiers .mkv dans le répertoire de base
 mkv_files = [f for f in os.listdir(base_directory) if f.endswith('.mkv')]

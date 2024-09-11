@@ -1,7 +1,8 @@
 import os
 
+
 # Remplace "/chemin/vers/repertoire" par le chemin du répertoire que tu veux analyser
-base_directory = "/media/hleet_user/HDD-EXT/[BlurayDesuYo] Full Metal Panic! Invisible Victory - BD BOX 01 (BD 1920x1080 10bit FLAC)"
+base_directory = "/media/hleet_user/HDD-EXT/[BlurayDesuYo] Full Metal Panic! Invisible Victory - BD BOX 02 (BD 1920x1080 10bit FLAC)"
 
 def count_files_in_subdirectories(base_directory):
     # Parcourir les sous-dossiers du répertoire de base
