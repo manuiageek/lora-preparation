@@ -1,0 +1,28 @@
+# Ignorer les répertoires d'environnement virtuel
+venv/
+VENV/
+.env/
+ENV/
+
+# Ignorer les fichiers de configuration spécifiques à l'IDE
+.vscode/
+.idea/
+
+# Ignorer les fichiers générés
+__pycache__/
+*.pyc
+*.pyo
+*.log
+
+# Ignorer les fichiers de distribution
+dist/
+build/
+*.egg-info/
+
+# Ignorer les fichiers de base de données ou de logs
+*.sqlite3
+*.db
+*.log
+
+# Ignorer les fichiers de tests locaux
+.coverage
