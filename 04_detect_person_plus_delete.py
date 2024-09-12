@@ -8,7 +8,7 @@ from ultralytics import YOLO
 torch.set_num_threads(20)
 
 # Charger le modèle YOLOv8 animeface pré-entraîné
-model = YOLO('yolov8x6_animeface.pt')
+model = YOLO('models\yolov8x6_animeface.pt')
 
 # Répertoire de base contenant les fichiers
 base_folder = r'T:\_SELECT\GRANCREST SENKI\25'
