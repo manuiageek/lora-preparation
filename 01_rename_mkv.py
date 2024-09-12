@@ -2,7 +2,7 @@ import os
 
 
 # Chemin du répertoire où se trouvent les fichiers
-directory      = "/media/hleet_user/HDD-EXT/[BlurayDesuYo] Full Metal Panic! Invisible Victory - BD BOX 02 (BD 1920x1080 10bit FLAC)"
+directory      = r"/media/hleet_user/HDD-EXT/[KAA]_Chrono_Crusade_01-24.DVD(complete)"
 
 # Obtenir la liste des fichiers .mkv dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith('.mkv')])
