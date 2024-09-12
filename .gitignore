@@ -26,3 +26,6 @@ build/
 
 # Ignorer les fichiers de tests locaux
 .coverage
+
+# Ignorer les fichiers models
+models/
