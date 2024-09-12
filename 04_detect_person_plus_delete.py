@@ -10,8 +10,8 @@ torch.set_num_threads(20)
 # Charger le modèle YOLOv8 animeface pré-entraîné
 model = YOLO('models\yolov8x6_animeface.pt')
 
-# Répertoire de base contenant les fichiers
-base_folder = r'T:\_SELECT\GRANCREST SENKI\25'
+# Répertoire de base contenant les sous-dossiers
+base_folder = r'T:\_SELECT\[sorrow] Please Teacher [BD 1080p HEVC] [Dual Audio FLAC]'
 
 # Taille du lot (nombre d'images traitées en parallèle)
 batch_size = 16
@@ -24,19 +24,18 @@ def load_images_into_memory(subfolder):
     images_in_memory = []
     paths_in_memory = []
     
-    # Charger les fichiers dans le dossier racine ET dans les sous-dossiers
-    for root, dirs, files in os.walk(subfolder):
-        for filename in files:
-            if filename.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-                image_path = os.path.join(root, filename)
-                
-                # Charger l'image dans la RAM
-                img = cv2.imread(image_path)
-                if img is not None:
-                    # Redimensionner l'image pour réduire l'utilisation de la mémoire
-                    img_resized = cv2.resize(img, target_size)
-                    images_in_memory.append(img_resized)
-                    paths_in_memory.append(image_path)
+    # Charger les fichiers uniquement dans le sous-dossier courant
+    for filename in os.listdir(subfolder):
+        if filename.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+            image_path = os.path.join(subfolder, filename)
+            
+            # Charger l'image dans la RAM
+            img = cv2.imread(image_path)
+            if img is not None:
+                # Redimensionner l'image pour réduire l'utilisation de la mémoire
+                img_resized = cv2.resize(img, target_size)
+                images_in_memory.append(img_resized)
+                paths_in_memory.append(image_path)
     
     return images_in_memory, paths_in_memory
 
@@ -62,10 +61,10 @@ def process_batch(images_batch, paths_batch):
         else:
             print(f"Image OK : {paths_batch[i]}")
 
-# Fonction pour traiter un répertoire complet
-def process_folder(folder, batch_size):
-    # Charger tout le dossier (y compris les sous-dossiers) en mémoire
-    images_in_memory, paths_in_memory = load_images_into_memory(folder)
+# Fonction pour traiter un sous-sous-dossier complet
+def process_subfolder(subfolder, batch_size):
+    # Charger toutes les images du sous-sous-dossier en RAM
+    images_in_memory, paths_in_memory = load_images_into_memory(subfolder)
     
     images_batch = []
     paths_batch = []
@@ -81,11 +80,14 @@ def process_folder(folder, batch_size):
             images_batch = []  # Réinitialiser le lot après traitement
             paths_batch = []
 
-    # Traiter les images restantes dans le dossier
+    # Traiter les images restantes dans le sous-sous-dossier
     if images_batch:
         process_batch(images_batch, paths_batch)
 
-# Traiter le répertoire de base et ses sous-dossiers (si existants)
-print(f"Chargement et traitement du dossier : {base_folder}")
-process_folder(base_folder, batch_size)
-print(f"Traitement du dossier {base_folder} terminé.")
+# Parcourir uniquement les sous-dossiers de `base_folder` et traiter chaque sous-dossier séparément
+for subdir in os.listdir(base_folder):
+    subfolder_path = os.path.join(base_folder, subdir)
+    if os.path.isdir(subfolder_path):
+        print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
+        process_subfolder(subfolder_path, batch_size)
+        print(f"Traitement du sous-dossier {subfolder_path} terminé.")
