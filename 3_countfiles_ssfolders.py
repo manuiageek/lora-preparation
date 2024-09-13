@@ -2,7 +2,7 @@ import os
 
 
 # Remplace "/chemin/vers/repertoire" par le chemin du répertoire que tu veux analyser
-base_directory = r"/media/hleet_user/HDD-EXT/[KAA]_Chrono_Crusade_01-24.DVD(complete)"
+base_directory = r"F:\The New Gate S01 1080p WEBRip AAC x265-EMBER"
 
 def count_files_in_subdirectories(base_directory):
     # Parcourir les sous-dossiers du répertoire de base

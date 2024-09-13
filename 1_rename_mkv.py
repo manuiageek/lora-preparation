@@ -2,7 +2,7 @@ import os
 
 
 # Chemin du répertoire où se trouvent les fichiers
-directory      = r"/media/hleet_user/HDD-EXT/[KAA]_Chrono_Crusade_01-24.DVD(complete)"
+directory      = r"F:\The New Gate S01 1080p WEBRip AAC x265-EMBER"
 
 # Obtenir la liste des fichiers .mkv dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith('.mkv')])

@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Spécifier le répertoire de base
-base_directory = r"/media/hleet_user/HDD-EXT/[KAA]_Chrono_Crusade_01-24.DVD(complete)"
+base_directory = r"F:\The New Gate S01 1080p WEBRip AAC x265-EMBER"
 
 # Obtenir la liste de tous les fichiers .mkv dans le répertoire de base
 mkv_files = [f for f in os.listdir(base_directory) if f.endswith('.mkv')]
