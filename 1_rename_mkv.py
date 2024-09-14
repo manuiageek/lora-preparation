@@ -2,7 +2,7 @@ import os
 
 
 # Chemin du répertoire où se trouvent les fichiers
-directory      = r"F:\The New Gate S01 1080p WEBRip AAC x265-EMBER"
+directory      = r"/media/hleet_user/HDD-EXT/[Judas] Love Hina (Season 1 + OVAs + Specials) [BD 1080p][HEVC x265 10bit][Dual-Audio][Eng-Subs]/[Judas] Love Hina - Specials"
 
 # Obtenir la liste des fichiers .mkv dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith('.mkv')])

@@ -2,7 +2,7 @@ import os
 
 
 # Remplace "/chemin/vers/repertoire" par le chemin du répertoire que tu veux analyser
-base_directory = r"F:\The New Gate S01 1080p WEBRip AAC x265-EMBER"
+base_directory = r"/media/hleet_user/HDD-EXT/[Judas] Love Hina (Season 1 + OVAs + Specials) [BD 1080p][HEVC x265 10bit][Dual-Audio][Eng-Subs]/[Judas] Love Hina - Specials"
 
 def count_files_in_subdirectories(base_directory):
     # Parcourir les sous-dossiers du répertoire de base
