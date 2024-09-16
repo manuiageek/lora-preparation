@@ -11,7 +11,7 @@ torch.set_num_threads(20)
 model = YOLO('models\yolov8x6_animeface.pt')
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"T:\_SELECT\Isekai Suicide Squad"
+base_folder = r"T:\_SELECT\GET BACKERS"
 
 # Taille du lot (nombre d'images traitées en parallèle)
 batch_size = 16

@@ -2,7 +2,7 @@ import os
 
 
 # Remplace "/chemin/vers/repertoire" par le chemin du répertoire que tu veux analyser
-base_directory = r"/media/hleet_user/HDD-EXT/[Judas] Love Hina (Season 1 + OVAs + Specials) [BD 1080p][HEVC x265 10bit][Dual-Audio][Eng-Subs]/[Judas] Love Hina - Specials"
+base_directory = r"G:\TRAIN_LORA\_EXTRACT_VIDEO\_TO_EXTR\[Anime Time] Black Lagoon (Complete Series) (Season 01+02+03+OST) [BD] [Dual Audio] [1080p][HEVC 10bit x265][AAC][Eng Sub]\Season 3 Roberta's Blood Trail"
 
 def count_files_in_subdirectories(base_directory):
     # Parcourir les sous-dossiers du répertoire de base
