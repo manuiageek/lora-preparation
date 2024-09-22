@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Spécifier le répertoire de base
-base_directory = r"G:\TRAIN_LORA\_EXTRACT_VIDEO\_TO_EXTR\[Anime Time] Black Lagoon (Complete Series) (Season 01+02+03+OST) [BD] [Dual Audio] [1080p][HEVC 10bit x265][AAC][Eng Sub]\Season 3 Roberta's Blood Trail"
+base_directory = r"F:\Tokidoki Bosotto Russia-go de Dereru Tonari no Alya-san"
 
 # Obtenir la liste de tous les fichiers .mkv dans le répertoire de base
 mkv_files = [f for f in os.listdir(base_directory) if f.endswith('.mkv')]

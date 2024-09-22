@@ -2,7 +2,7 @@ import os
 
 
 # Chemin du répertoire où se trouvent les fichiers
-directory      = r"T:\_SELECT\[DKB] Dekiru Neko wa Kyou mo Yuuutsu - (Season 01) [1080p][HEVC x265 10bit][Multi-Subs]"
+directory      = r"F:\Tokidoki Bosotto Russia-go de Dereru Tonari no Alya-san"
 
 # Obtenir la liste des fichiers .mkv dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith('.mkv')])
