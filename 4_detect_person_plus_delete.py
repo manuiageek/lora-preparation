@@ -11,7 +11,7 @@ torch.set_num_threads(20)
 model = YOLO('models\yolov8x6_animeface.pt')
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\[Anime Time] Konosuba S01+02+OVA+Movie [Dual Audio][BD][1080p][HEVC 10bit x265][AAC][Eng Sub]\Movie"
+base_folder = r"G:\TRAIN_LORA\_EXTRACT_VIDEO\_NEW\VTuber Nandaga Haishin Kiri Wasuretara Densetsu ni Natteta"
 
 # Taille du lot (nombre d'images traitées en parallèle)
 batch_size = 16
