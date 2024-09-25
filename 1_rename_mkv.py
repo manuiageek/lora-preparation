@@ -2,7 +2,7 @@ import os
 
 
 # Chemin du répertoire où se trouvent les fichiers
-directory      = r"F:\Tokidoki Bosotto Russia-go de Dereru Tonari no Alya-san"
+directory      = r"G:\TRAIN_LORA\_EXTRACT_VIDEO\_NEW\ISEKAI SHIKKAKU"
 
 # Obtenir la liste des fichiers .mkv dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith('.mkv')])

@@ -11,7 +11,7 @@ torch.set_num_threads(20)
 model = YOLO('models\yolov8x6_animeface.pt')
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"G:\TRAIN_LORA\_EXTRACT_VIDEO\_NEW\VTuber Nandaga Haishin Kiri Wasuretara Densetsu ni Natteta"
+base_folder = r"G:\TRAIN_LORA\_EXTRACT_VIDEO\_NEW\ISEKAI SHIKKAKU"
 
 # Taille du lot (nombre d'images traitées en parallèle)
 batch_size = 16

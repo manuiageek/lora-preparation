@@ -29,3 +29,6 @@ build/
 
 # Ignorer les fichiers models
 models/
+
+# Ignorer les fichiers images
+images/

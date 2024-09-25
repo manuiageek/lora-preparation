@@ -3,5 +3,6 @@ Some python scripts (written with the help of chatgpt) that I use to prepare LoR
 - 2_ffmpeg_extr_jpg.py : extract frames from mkv with ffmpeg tool
 - 3_countfiles_ssfolders.py : counting files from subfolders to check the export in jpg
 - 4_detect_person_plus_delete.py : it loads yolov8x6_animeface model in order to check if AI can find a "face" inside loop of images in a folder. Deleting any image that doesn't contain "anime face" in the frame.
-- 5_batch_rename_resize_convertojpg.py
-- 6_Comfyui_PREPLORA.json : workflow for comfyui
+- 5_character_categorisation.py : https://github.com/KichangKim/DeepDanbooru/releases
+- 6_batch_rename_resize_convertojpg.py
+- 7_Comfyui_PREPLORA.json : workflow for comfyui
