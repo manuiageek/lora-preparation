@@ -5,7 +5,11 @@ import os
 import glob
 import shutil  # Pour gérer les fichiers et dossiers
 import tensorflow as tf
+from tensorflow.keras import mixed_precision
 from concurrent.futures import ThreadPoolExecutor
+
+# Activer le mode de précision mixte
+mixed_precision.set_global_policy('mixed_float16')
 
 # Désactiver les messages de log TensorFlow
 tf.get_logger().setLevel('ERROR')
@@ -36,7 +40,7 @@ characters = {
 def load_image(image_path, width, height):
     image = Image.open(image_path).convert('RGB')
     image = image.resize((width, height), Image.LANCZOS)
-    image = np.array(image, dtype=np.float32) / 255.0
+    image = np.array(image, dtype=np.float16) / 255.0  # Utiliser float16 pour la précision mixte
     return image
 
 # Fonction pour prétraiter un batch d'images en parallèle
@@ -54,6 +58,9 @@ def predict_image_tags_batch(image_paths, threshold=0.5):
     # Faire une prédiction en supprimant les logs inutiles
     predictions = model.predict(images, verbose=0)  # Prédictions pour tout le batch
 
+    # Convertir les prédictions en float32 pour éviter les problèmes de compatibilité
+    predictions = predictions.astype(np.float32)
+
     batch_results = []
     for idx, preds in enumerate(predictions):
         result_tags = []
@@ -65,7 +72,7 @@ def predict_image_tags_batch(image_paths, threshold=0.5):
     return batch_results  # Retourne une liste de tuples (image_path, predicted_tags_set, result_tags)
 
 # Fonction pour traiter un sous-dossier
-def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=32):
+def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=16):
     subfolder_name = os.path.basename(subfolder_path)
     print(f"\nTraitement du dossier : {subfolder_name}")
 
@@ -216,7 +223,7 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
     print(f"Le dossier '{subfolder_name}' a été traité.")
 
 # Fonction principale pour traiter tous les sous-dossiers
-def process_all_subfolders(root_folder, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=32):
+def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16):
     # Obtenir la liste des sous-dossiers à traiter
     subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
 
@@ -231,7 +238,7 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.5, match
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size)
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\__DUMBBELL NANKILO MOTERU'  # Dossier racine contenant les sous-dossiers à traiter
+root_folder = r'T:\_SELECT\__DUMBBELL NANKILO MOTERU'  # Remplacez par le chemin vers votre dossier
 destination_folder = root_folder  # Les dossiers de destination se trouvent dans le dossier racine
 
 # Appeler la fonction pour traiter tous les sous-dossiers
