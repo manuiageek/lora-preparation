@@ -32,3 +32,6 @@ models/
 
 # Ignorer les fichiers images
 images/
+
+# Ignorer les fichiers venv
+venv/

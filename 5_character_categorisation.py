@@ -59,10 +59,10 @@ def predict_image_tags_batch(image_paths, threshold=0.5):
 # Fonction pour traiter toutes les images dans un dossier et détecter les personnages
 def process_images_and_detect_characters(folder_path, threshold=0.5, match_threshold=0.5, batch_size=16):
     # Obtenir la liste des fichiers d'images dans le dossier
-    image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp')
+    image_extensions = ('**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.bmp')
     image_paths = []
     for extension in image_extensions:
-        image_paths.extend(glob.glob(os.path.join(folder_path, extension)))
+        image_paths.extend(glob.glob(os.path.join(folder_path, extension), recursive=True))
 
     # Vérifier s'il y a des images dans le dossier
     if not image_paths:
@@ -98,6 +98,9 @@ def process_images_and_detect_characters(folder_path, threshold=0.5, match_thres
 
         # Traiter les résultats du batch
         for image_path, predicted_tags_set, result_tags in batch_results:
+            # Obtenir le nom du dernier dossier du chemin de l'image
+            last_folder_name = os.path.basename(os.path.dirname(image_path))
+
             # Vérifier chaque personnage
             image_characters = []  # Liste des personnages détectés dans cette image
             for character, char_tags in characters.items():
@@ -109,17 +112,21 @@ def process_images_and_detect_characters(folder_path, threshold=0.5, match_thres
                     image_characters.append(character)
                     character_detections[character].append(image_path)
 
-            # Copier l'image dans les dossiers correspondants
+            # Copier l'image dans les dossiers correspondants avec le nouveau nom
             if image_characters:
                 for character in image_characters:
                     character_folder = os.path.join(folder_path, character)
-                    destination_path = os.path.join(character_folder, os.path.basename(image_path))
+                    # Nouveau nom de fichier : last_folder_name_nom_original.jpg
+                    original_filename = os.path.basename(image_path)
+                    new_filename = f"{last_folder_name}_{original_filename}"
+                    destination_path = os.path.join(character_folder, new_filename)
 
                     # Éviter l'écrasement si le fichier existe déjà
-                    base_name, extension = os.path.splitext(os.path.basename(image_path))
+                    base_name, extension = os.path.splitext(new_filename)
                     counter = 1
                     while os.path.exists(destination_path):
-                        destination_path = os.path.join(character_folder, f"{base_name}_{counter}{extension}")
+                        new_filename = f"{base_name}_{counter}{extension}"
+                        destination_path = os.path.join(character_folder, new_filename)
                         counter += 1
 
                     shutil.copy2(image_path, destination_path)
@@ -129,15 +136,19 @@ def process_images_and_detect_characters(folder_path, threshold=0.5, match_thres
                     print(f"L'image '{os.path.basename(image_path)}' a été classée dans les dossiers : {', '.join(image_characters)}")
                 else:
                     print(f"L'image '{os.path.basename(image_path)}' a été classée dans le dossier : {image_characters[0]}")
+
             else:
-                # Copier l'image dans 'zdivers'
-                destination_path = os.path.join(zdivers_folder, os.path.basename(image_path))
+                # Copier l'image dans 'zdivers' avec le nouveau nom
+                original_filename = os.path.basename(image_path)
+                new_filename = f"{last_folder_name}_{original_filename}"
+                destination_path = os.path.join(zdivers_folder, new_filename)
 
                 # Éviter l'écrasement si le fichier existe déjà
-                base_name, extension = os.path.splitext(os.path.basename(image_path))
+                base_name, extension = os.path.splitext(new_filename)
                 counter = 1
                 while os.path.exists(destination_path):
-                    destination_path = os.path.join(zdivers_folder, f"{base_name}_{counter}{extension}")
+                    new_filename = f"{base_name}_{counter}{extension}"
+                    destination_path = os.path.join(zdivers_folder, new_filename)
                     counter += 1
 
                 shutil.copy2(image_path, destination_path)
@@ -152,7 +163,7 @@ def process_images_and_detect_characters(folder_path, threshold=0.5, match_thres
     """
 
 # Chemin vers le dossier contenant les images
-folder_path = 'images'  # Remplacez par le chemin vers votre dossier d'images
+folder_path = r'T:\_SELECT\__DUMBBELL NANKILO MOTERU\test'  # Remplacez par le chemin vers votre dossier d'images
 
 # Appeler la fonction pour traiter les images du dossier
-process_images_and_detect_characters(folder_path, threshold=0.5, match_threshold=0.5, batch_size=32)
+process_images_and_detect_characters(folder_path, threshold=0.3, match_threshold=0.5, batch_size=32)
