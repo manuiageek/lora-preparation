@@ -4,8 +4,13 @@ from PIL import Image
 import os
 import glob
 import shutil  # Pour gérer les fichiers et dossiers
+import tensorflow as tf
+from concurrent.futures import ThreadPoolExecutor
 
-# Spécifiez le chemin vers le projet DeepDanbooru (le dossier où vous avez extrait le modèle pré-entraîné)
+# Désactiver les messages de log TensorFlow
+tf.get_logger().setLevel('ERROR')
+
+# Spécifiez le chemin vers le projet DeepDanbooru
 project_path = './models/deepdanbooru'
 
 # Charger le modèle
@@ -27,14 +32,17 @@ characters = {
     'satomi_dnm': ['black_hair', 'brown_eyes', 'short_hair']
 }
 
-# Fonction pour prétraiter un batch d'images
+# Fonction pour charger une image
+def load_image(image_path, width, height):
+    image = Image.open(image_path).convert('RGB')
+    image = image.resize((width, height), Image.LANCZOS)
+    image = np.array(image, dtype=np.float32) / 255.0
+    return image
+
+# Fonction pour prétraiter un batch d'images en parallèle
 def load_images_for_deepdanbooru(image_paths, width, height):
-    images = []
-    for image_path in image_paths:
-        image = Image.open(image_path).convert('RGB')
-        image = image.resize((width, height), Image.LANCZOS)
-        image = np.array(image, dtype=np.float32) / 255.0
-        images.append(image)
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        images = list(executor.map(lambda p: load_image(p, width, height), image_paths))
     images = np.stack(images, axis=0)
     return images  # Retourne un tableau numpy de forme (batch_size, height, width, 3)
 
@@ -56,38 +64,51 @@ def predict_image_tags_batch(image_paths, threshold=0.5):
         batch_results.append((image_paths[idx], predicted_tags_set, result_tags))
     return batch_results  # Retourne une liste de tuples (image_path, predicted_tags_set, result_tags)
 
-# Fonction pour traiter toutes les images dans un dossier et détecter les personnages
-def process_images_and_detect_characters(folder_path, threshold=0.5, match_threshold=0.5, batch_size=16):
-    # Obtenir la liste des fichiers d'images dans le dossier
-    image_extensions = ('**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.bmp')
+# Fonction pour traiter un sous-dossier
+def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=32):
+    subfolder_name = os.path.basename(subfolder_path)
+    print(f"\nTraitement du dossier : {subfolder_name}")
+
+    # Obtenir la liste des fichiers d'images dans le sous-dossier
+    image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp')
     image_paths = []
     for extension in image_extensions:
-        image_paths.extend(glob.glob(os.path.join(folder_path, extension), recursive=True))
+        image_paths.extend(glob.glob(os.path.join(subfolder_path, extension)))
 
-    # Vérifier s'il y a des images dans le dossier
     if not image_paths:
-        print(f"Aucune image trouvée dans le dossier {folder_path}.")
+        print(f"Aucune image trouvée dans le dossier {subfolder_path}.")
         return
 
-    # Dictionnaire pour stocker les résultats
-    character_detections = {character: [] for character in characters}
-
-    # Supprimer et recréer les sous-dossiers pour chaque personnage
+    # Créer les dossiers de destination s'ils n'existent pas
+    character_folders = {}
     for character in characters:
-        character_folder = os.path.join(folder_path, character)
-        if os.path.exists(character_folder):
-            shutil.rmtree(character_folder)
-            print(f"Le dossier '{character}' existait déjà et a été supprimé.")
-        os.makedirs(character_folder)
-        print(f"Le dossier '{character}' a été créé.")
+        character_folder = os.path.join(destination_folder, character)
+        if not os.path.exists(character_folder):
+            os.makedirs(character_folder)
+            print(f"Le dossier '{character}' a été créé.")
 
-    # Supprimer et recréer le dossier 'zdivers' pour les images sans correspondance
-    zdivers_folder = os.path.join(folder_path, 'zdivers')
-    if os.path.exists(zdivers_folder):
-        shutil.rmtree(zdivers_folder)
-        print("Le dossier 'zdivers' existait déjà et a été supprimé.")
-    os.makedirs(zdivers_folder)
-    print("Le dossier 'zdivers' a été créé.")
+        character_folders[character] = character_folder
+
+    # Créer le dossier 'zboy' s'il n'existe pas
+    zboy_folder = os.path.join(destination_folder, 'zboy')
+    if not os.path.exists(zboy_folder):
+        os.makedirs(zboy_folder)
+        print("Le dossier 'zboy' a été créé.")
+
+    # Créer le dossier 'zmisc' s'il n'existe pas
+    zmisc_folder = os.path.join(destination_folder, 'zmisc')
+    if not os.path.exists(zmisc_folder):
+        os.makedirs(zmisc_folder)
+        print("Le dossier 'zmisc' a été créé.")
+
+    # Supprimer les fichiers commençant par le nom du sous-dossier dans les dossiers de destination
+    prefix = subfolder_name.split('_')[0] + '_'
+    for folder in list(character_folders.values()) + [zboy_folder, zmisc_folder]:
+        for file in os.listdir(folder):
+            if file.startswith(prefix):
+                file_path = os.path.join(folder, file)
+                os.remove(file_path)
+                print(f"Le fichier '{file}' a été supprimé du dossier '{os.path.basename(folder)}'.")
 
     # Traiter les images par batches
     num_images = len(image_paths)
@@ -98,8 +119,31 @@ def process_images_and_detect_characters(folder_path, threshold=0.5, match_thres
 
         # Traiter les résultats du batch
         for image_path, predicted_tags_set, result_tags in batch_results:
-            # Obtenir le nom du dernier dossier du chemin de l'image
-            last_folder_name = os.path.basename(os.path.dirname(image_path))
+            # Obtenir le chemin relatif de l'image par rapport au dossier racine
+            relative_image_path = os.path.relpath(image_path, destination_folder)
+
+            # Vérifier la présence des tags "boy" et "girl"
+            has_boy = any('boy' in tag for tag in predicted_tags_set)
+            has_girl = any('girl' in tag for tag in predicted_tags_set)
+
+            # Si l'image contient "boy" et pas "girl", la déplacer dans 'zboy'
+            if has_boy and not has_girl:
+                # Copier l'image dans 'zboy' avec le nom original
+                original_filename = os.path.basename(image_path)
+                new_filename = f"{subfolder_name}_{original_filename}"
+                destination_path = os.path.join(zboy_folder, new_filename)
+
+                # Éviter l'écrasement si le fichier existe déjà
+                base_name, extension = os.path.splitext(new_filename)
+                counter = 1
+                while os.path.exists(destination_path):
+                    new_filename = f"{base_name}_{counter}{extension}"
+                    destination_path = os.path.join(zboy_folder, new_filename)
+                    counter += 1
+
+                shutil.copy2(image_path, destination_path)
+                print(f"L'image '{subfolder_name}/{original_filename}' contient 'boy' et a été classée dans le dossier : zboy")
+                continue  # Passer à l'image suivante
 
             # Vérifier chaque personnage
             image_characters = []  # Liste des personnages détectés dans cette image
@@ -110,15 +154,13 @@ def process_images_and_detect_characters(folder_path, threshold=0.5, match_thres
 
                 if match_ratio >= match_threshold:
                     image_characters.append(character)
-                    character_detections[character].append(image_path)
 
-            # Copier l'image dans les dossiers correspondants avec le nouveau nom
             if image_characters:
+                # Copier l'image dans les dossiers correspondants avec le nouveau nom
                 for character in image_characters:
-                    character_folder = os.path.join(folder_path, character)
-                    # Nouveau nom de fichier : last_folder_name_nom_original.jpg
+                    character_folder = character_folders[character]
                     original_filename = os.path.basename(image_path)
-                    new_filename = f"{last_folder_name}_{original_filename}"
+                    new_filename = f"{subfolder_name}_{original_filename}"
                     destination_path = os.path.join(character_folder, new_filename)
 
                     # Éviter l'écrasement si le fichier existe déjà
@@ -133,37 +175,64 @@ def process_images_and_detect_characters(folder_path, threshold=0.5, match_thres
 
                 # Afficher une ligne indiquant dans quels dossiers l'image a été classée
                 if len(image_characters) > 1:
-                    print(f"L'image '{os.path.basename(image_path)}' a été classée dans les dossiers : {', '.join(image_characters)}")
+                    print(f"L'image '{subfolder_name}/{original_filename}' a été classée dans les dossiers : {', '.join(image_characters)}")
                 else:
-                    print(f"L'image '{os.path.basename(image_path)}' a été classée dans le dossier : {image_characters[0]}")
-
+                    print(f"L'image '{subfolder_name}/{original_filename}' a été classée dans le dossier : {image_characters[0]}")
             else:
-                # Copier l'image dans 'zdivers' avec le nouveau nom
-                original_filename = os.path.basename(image_path)
-                new_filename = f"{last_folder_name}_{original_filename}"
-                destination_path = os.path.join(zdivers_folder, new_filename)
+                # Si l'image contient 'boy' et 'girl' mais ne correspond à aucun personnage féminin, la déplacer dans 'zmisc'
+                if has_boy and has_girl:
+                    # Copier l'image dans 'zmisc' avec le nouveau nom
+                    original_filename = os.path.basename(image_path)
+                    new_filename = f"{subfolder_name}_{original_filename}"
+                    destination_path = os.path.join(zmisc_folder, new_filename)
 
-                # Éviter l'écrasement si le fichier existe déjà
-                base_name, extension = os.path.splitext(new_filename)
-                counter = 1
-                while os.path.exists(destination_path):
-                    new_filename = f"{base_name}_{counter}{extension}"
-                    destination_path = os.path.join(zdivers_folder, new_filename)
-                    counter += 1
+                    # Éviter l'écrasement si le fichier existe déjà
+                    base_name, extension = os.path.splitext(new_filename)
+                    counter = 1
+                    while os.path.exists(destination_path):
+                        new_filename = f"{base_name}_{counter}{extension}"
+                        destination_path = os.path.join(zmisc_folder, new_filename)
+                        counter += 1
 
-                shutil.copy2(image_path, destination_path)
-                print(f"L'image '{os.path.basename(image_path)}' a été classée dans le dossier : zdivers")
+                    shutil.copy2(image_path, destination_path)
+                    print(f"L'image '{subfolder_name}/{original_filename}' contient 'boy' et 'girl', mais n'a correspondu à aucun personnage. Classée dans 'zmisc'.")
+                else:
+                    # Copier l'image dans 'zmisc' avec le nouveau nom
+                    original_filename = os.path.basename(image_path)
+                    new_filename = f"{subfolder_name}_{original_filename}"
+                    destination_path = os.path.join(zmisc_folder, new_filename)
 
-    # Afficher le résumé (optionnel)
-    """
-    print("\n--- Résumé ---")
-    print(f"Nombre total d'images traitées : {num_images}")
-    for character, images in character_detections.items():
-        print(f"Nombre d'images où '{character}' a été détecté : {len(images)}")
-    """
+                    # Éviter l'écrasement si le fichier existe déjà
+                    base_name, extension = os.path.splitext(new_filename)
+                    counter = 1
+                    while os.path.exists(destination_path):
+                        new_filename = f"{base_name}_{counter}{extension}"
+                        destination_path = os.path.join(zmisc_folder, new_filename)
+                        counter += 1
+
+                    shutil.copy2(image_path, destination_path)
+                    print(f"L'image '{subfolder_name}/{original_filename}' a été classée dans le dossier : zmisc")
+
+    print(f"Le dossier '{subfolder_name}' a été traité.")
+
+# Fonction principale pour traiter tous les sous-dossiers
+def process_all_subfolders(root_folder, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=32):
+    # Obtenir la liste des sous-dossiers à traiter
+    subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
+
+    if not subfolders:
+        print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}.")
+        return
+
+    for subfolder in subfolders:
+        # Ignorer les dossiers de destination (personnages, 'zboy' et 'zmisc')
+        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'zmisc']:
+            continue
+        process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size)
 
 # Chemin vers le dossier contenant les images
-folder_path = r'T:\_SELECT\__DUMBBELL NANKILO MOTERU\test'  # Remplacez par le chemin vers votre dossier d'images
+root_folder = r'T:\_SELECT\__DUMBBELL NANKILO MOTERU'  # Dossier racine contenant les sous-dossiers à traiter
+destination_folder = root_folder  # Les dossiers de destination se trouvent dans le dossier racine
 
-# Appeler la fonction pour traiter les images du dossier
-process_images_and_detect_characters(folder_path, threshold=0.3, match_threshold=0.5, batch_size=32)
+# Appeler la fonction pour traiter tous les sous-dossiers
+process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16)
