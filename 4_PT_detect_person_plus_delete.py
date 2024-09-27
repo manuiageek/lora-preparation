@@ -3,15 +3,22 @@ import cv2
 import numpy as np
 import torch
 from ultralytics import YOLO
+from pathlib import Path
 
-# Ajuster le nombre de threads CPU pour PyTorch
-torch.set_num_threads(20)
+# Déterminer le device (GPU ou CPU)
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"Utilisation du device : {device}")
 
-# Charger le modèle YOLOv8 animeface pré-entraîné
-model = YOLO('models\yolov8x6_animeface.pt')
+# Ajuster le nombre de threads CPU pour PyTorch si on est sur CPU
+if device == 'cpu':
+    torch.set_num_threads(20)
+
+# Charger le modèle YOLOv8 animeface pré-entraîné sur le bon device
+model_path = Path('models') / 'yolov8x6_animeface.pt'
+model = YOLO(str(model_path)).to(device)
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"G:\TRAIN_LORA\_EXTRACT_VIDEO\_NEW\ISEKAI SHIKKAKU"
+base_folder = r"F:/2_TO_EPURATE/SHINMAI OSSAN BOUKENSHA"
 
 # Taille du lot (nombre d'images traitées en parallèle)
 batch_size = 16
@@ -26,7 +33,7 @@ def load_images_into_memory(subfolder):
     
     # Charger les fichiers uniquement dans le sous-dossier courant
     for filename in os.listdir(subfolder):
-        if filename.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+        if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
             image_path = os.path.join(subfolder, filename)
             
             # Charger l'image dans la RAM
@@ -41,8 +48,8 @@ def load_images_into_memory(subfolder):
 
 # Fonction pour traiter un lot d'images
 def process_batch(images_batch, paths_batch):
-    # Utilisation du mode de précision mixte (AMP) pour optimiser l'utilisation de la mémoire du GPU
-    with torch.amp.autocast('cuda'):
+    # Utilisation du mode de précision mixte (AMP) pour optimiser l'utilisation de la mémoire
+    with torch.amp.autocast(device_type=device):
         results = model(images_batch, conf=0.25, verbose=False)
 
     for i, result in enumerate(results):
@@ -56,7 +63,7 @@ def process_batch(images_batch, paths_batch):
 
         # Si aucune animeface n'est détectée, supprimer l'image
         if not animeface_detected:
-            print(f"Rien dans : {paths_batch[i]}. Suppression ...")
+            print(f"Rien détecté dans : {paths_batch[i]}. Suppression ...")
             os.remove(paths_batch[i])
         else:
             print(f"Image OK : {paths_batch[i]}")
@@ -70,7 +77,7 @@ def process_subfolder(subfolder, batch_size):
     paths_batch = []
 
     # Parcourir les images chargées en mémoire et les traiter par lots
-    for i, (img, image_path) in enumerate(zip(images_in_memory, paths_in_memory)):
+    for img, image_path in zip(images_in_memory, paths_in_memory):
         images_batch.append(img)
         paths_batch.append(image_path)
         
