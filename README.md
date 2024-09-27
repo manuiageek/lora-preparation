@@ -14,14 +14,19 @@ pip install tensorflow-io
 
 GPU ACCELERATION : 
 For gpu acceleration, use miniconda : https://docs.anaconda.com/miniconda/
-example (install first the miniconda before) inside command-line :
-conda create -n loraprep_env python=3.9
-conda activate loraprep_env
-conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
-pip install --upgrade pip
-pip install tensorflow==2.10
+PYTORCH CONDA GUIDE :
+conda create -n pte python=3.9
+conda activate pte
+conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+pip install numpy opencv-python ultralytics
+
+TENSORFLOW CONDA GUIDE : 
+conda create -n tfe python=3.9
+conda activate tfe
+conda install -c conda-forge cudatoolkit=11.8 cudnn=8.1
+pip install tensorflow
+note : TF is hard to install ! ... good luck
 
 Test : 
 python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
-
 
