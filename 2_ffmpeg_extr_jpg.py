@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Spécifier le répertoire de base
-base_directory = r"/media/hleet_user/HDD-EXT/1_TO_EXTRACT/SHOKUGEKI NO SOUMA/Shokugeki no Souma Shin no Sara"
+base_directory = r"/media/hleet_user/HDD-EXT/1_TO_EXTRACT/SLAYERS/Slayers S2 Next EngSoftSub"
 
 # Obtenir la liste de tous les fichiers .mkv dans le répertoire de base
 mkv_files = [f for f in os.listdir(base_directory) if f.endswith('.mkv')]

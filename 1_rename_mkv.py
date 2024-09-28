@@ -2,7 +2,7 @@ import os
 
 
 # Chemin du répertoire où se trouvent les fichiers
-directory      = r"/media/hleet_user/HDD-EXT/1_TO_EXTRACT/SHOKUGEKI NO SOUMA/Shokugeki no Souma Shin no Sara"
+directory      = r"/media/hleet_user/HDD-EXT/1_TO_EXTRACT/SLAYERS/Slayers S2 Next EngSoftSub"
 
 # Obtenir la liste des fichiers .mkv dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith('.mkv')])
