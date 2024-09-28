@@ -23,7 +23,7 @@ model = YOLO(str(model_path))  # Charger le modèle
 model.to(device)  # Envoyer le modèle sur le GPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\2_TO_EPURATE\HAZUREWAKU"
+base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma"
 
 # Taille de l'image pour réduire l'utilisation de la VRAM
 target_size = (640, 640)  # Redimensionner les images à 640x640

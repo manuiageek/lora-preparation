@@ -43,21 +43,16 @@ def load_and_resize_image(image_path, width, height):
     image = np.array(image, dtype=np.float16) / 255.0  # Utiliser float16 pour la précision mixte
     return image
 
-# Fonction pour prétraiter un batch d'images en parallèle sur le CPU
-def load_images_for_deepdanbooru(image_paths, width, height):
+# Fonction pour charger toutes les images d'un sous-dossier dans la RAM
+def load_all_images_from_subfolder(image_paths, width, height):
     with ThreadPoolExecutor(max_workers=12) as executor:  # Utiliser 12 cœurs pour le redimensionnement
         images = list(executor.map(lambda p: load_and_resize_image(p, width, height), image_paths))
-    images = np.stack(images, axis=0)  # Convertir en tableau numpy
-    return images
+    return images  # Retourne une liste d'images redimensionnées
 
 # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
-def predict_image_tags_batch(image_paths, threshold=0.5):
-    width, height = model.input_shape[2], model.input_shape[1]
-
-    # Charger et redimensionner les images sur le CPU
-    images = load_images_for_deepdanbooru(image_paths, width, height)
-
+def predict_image_tags_batch(images, image_paths, threshold=0.5):
     # Faire une prédiction sur le GPU
+    images = np.stack(images, axis=0)  # Convertir en tableau numpy pour l'inférence
     predictions = model.predict(images, verbose=0)
 
     # Convertir les prédictions en float32 pour éviter les problèmes de compatibilité
@@ -88,6 +83,10 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
         print(f"Aucune image trouvée dans le dossier {subfolder_path}.")
         return
 
+    # Charger toutes les images du sous-dossier en RAM
+    width, height = model.input_shape[2], model.input_shape[1]
+    images = load_all_images_from_subfolder(image_paths, width, height)
+
     # Créer les dossiers de destination s'ils n'existent pas
     character_folders = {}
     for character in characters:
@@ -108,8 +107,9 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
     num_images = len(image_paths)
     for start_idx in range(0, num_images, batch_size):
         end_idx = min(start_idx + batch_size, num_images)
+        batch_images = images[start_idx:end_idx]
         batch_image_paths = image_paths[start_idx:end_idx]
-        batch_results = predict_image_tags_batch(batch_image_paths, threshold=threshold)
+        batch_results = predict_image_tags_batch(batch_images, batch_image_paths, threshold=threshold)
 
         # Traiter les résultats du batch
         for image_path, predicted_tags_set, result_tags in batch_results:
