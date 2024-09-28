@@ -10,40 +10,41 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Utilisation du device : {device}")
 
 # Ajuster le nombre de threads CPU pour PyTorch si on est sur CPU
-num_processes = 8
+num_processes = 16  # Utiliser 16 cœurs CPU
 if device == 'cpu':
     torch.set_num_threads(num_processes)
-    batch_size = 1
+    batch_size = num_processes  # Tester une taille de lot plus élevée pour le CPU
 else:
-    batch_size = 16
+    batch_size = 20  # Taille de lot pour le GPU
 
-# Charger le modèle YOLOv8 animeface pré-entraîné sur le bon device
+# Charger le modèle YOLOv8 animeface pré-entraîné sur le GPU
 model_path = Path('models') / 'yolov8x6_animeface.pt'
 model = YOLO(str(model_path))  # Charger le modèle
-model.to(device)  # Envoyer le modèle sur le bon device (CPU ou GPU)
+model.to(device)  # Envoyer le modèle sur le GPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"/media/hleet_user/HDD-EXT/2_TO_EPURATE/HAZUREWAKU"
+base_folder = r"F:\2_TO_EPURATE\HAZUREWAKU"
 
 # Taille de l'image pour réduire l'utilisation de la VRAM
 target_size = (640, 640)  # Redimensionner les images à 640x640
 
-# Fonction pour charger une image et redimensionner
+# Fonction pour charger une image et redimensionner (CPU)
 def load_and_resize_image(image_path):
     img = cv2.imread(image_path)
     if img is not None:
         return cv2.resize(img, target_size), image_path
     return None, image_path
 
-# Fonction pour traiter un lot d'images
+# Fonction pour traiter un lot d'images (GPU)
 def process_batch(images_batch, paths_batch):
     if device == 'cuda':
-        autocast_context = torch.cuda.amp.autocast()
+        autocast_context = torch.amp.autocast('cuda')  # Correction du contexte AMP
     else:
         autocast_context = torch.no_grad()  # Sur CPU, utiliser torch.no_grad()
 
     with autocast_context:
-        results = model(images_batch)  # Appeler directement l'inférence sur les images
+        # Désactiver les logs de prédiction en ajoutant verbose=False
+        results = model(images_batch, verbose=False)  # Appeler directement l'inférence sur les images (numpy.ndarray)
 
     for i, result in enumerate(results):
         animeface_detected = False
@@ -59,7 +60,7 @@ def process_batch(images_batch, paths_batch):
         else:
             print(f"Image OK : {paths_batch[i]}")
 
-# Fonction pour traiter un sous-dossier complet en parallèle
+# Fonction pour traiter un sous-dossier complet en parallèle (redimensionnement sur CPU)
 def process_subfolder(subfolder, batch_size):
     images_in_memory = []
     paths_in_memory = []
@@ -78,7 +79,7 @@ def process_subfolder(subfolder, batch_size):
                 images_in_memory.append(img_resized)
                 paths_in_memory.append(image_path)
 
-    # Traiter les images par lots
+    # Traiter les images par lots (inférence sur GPU)
     images_batch = []
     paths_batch = []
 
@@ -95,10 +96,12 @@ def process_subfolder(subfolder, batch_size):
     if images_batch:
         process_batch(images_batch, paths_batch)
 
-# Parcourir uniquement les sous-dossiers de `base_folder` et traiter chaque sous-dossier séparément
-for subdir in os.listdir(base_folder):
-    subfolder_path = os.path.join(base_folder, subdir)
-    if os.path.isdir(subfolder_path):
-        print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
-        process_subfolder(subfolder_path, batch_size)
-        print(f"Traitement du sous-dossier {subfolder_path} terminé.")
+# Utiliser `if __name__ == '__main__':` pour éviter les problèmes avec multiprocessing sur Windows
+if __name__ == '__main__':
+    # Parcourir uniquement les sous-dossiers de `base_folder` et traiter chaque sous-dossier séparément
+    for subdir in os.listdir(base_folder):
+        subfolder_path = os.path.join(base_folder, subdir)
+        if os.path.isdir(subfolder_path):
+            print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
+            process_subfolder(subfolder_path, batch_size)
+            print(f"Traitement du sous-dossier {subfolder_path} terminé.")
