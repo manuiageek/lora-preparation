@@ -13,4 +13,14 @@ PYTORCH CONDA GUIDE :
 conda create -n ptorch_env python=3.9
 conda activate ptorch_env
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-pip install numpy opencv-python ultralytics
+pip install numpy opencv-python ultralytics 
+
+TENSORFLOW CONDA GUIDE :
+conda create -n tflow_env python=3.10
+conda activate tflow_env
+conda install -c conda-forge cudatoolkit=11.8 cudnn=8.6.0
+pip install tensorflow
+pip install numpy pillow tensorflow-io
+
+check TensorFlow GPU :
+python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
