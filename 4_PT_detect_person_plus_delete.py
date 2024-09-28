@@ -3,7 +3,7 @@ import cv2
 import torch
 from ultralytics import YOLO
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 # Déterminer le device (GPU ou CPU)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -66,7 +66,7 @@ def process_subfolder(subfolder, batch_size):
     paths_in_memory = []
 
     # Charger toutes les images du sous-dossier en RAM en parallèle
-    with ProcessPoolExecutor(max_workers=num_processes) as executor:
+    with ThreadPoolExecutor(max_workers=num_processes) as executor:
         futures = []
         for filename in os.listdir(subfolder):
             if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):

@@ -18,9 +18,9 @@ pip install numpy opencv-python ultralytics
 TENSORFLOW CONDA GUIDE :
 conda create -n tflow_env python=3.10
 conda activate tflow_env
-conda install -c conda-forge cudatoolkit=11.8 cudnn=8.6.0
-pip install tensorflow
-pip install numpy pillow tensorflow-io
+conda install cudatoolkit=11.8 cudnn=8.6 -c conda-forge
+pip install tensorflow==2.10.0
+pip install numpy pillow tensorflow-io deepdanbooru
 
 check TensorFlow GPU :
 python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
