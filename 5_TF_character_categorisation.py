@@ -12,25 +12,10 @@ from concurrent.futures import ThreadPoolExecutor
 # Définir le nombre de cœurs CPU à utiliser
 NUM_CORES = 12
 
-# Limiter la croissance de la mémoire du GPU
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
-
-# Activer le mode de précision mixte
-mixed_precision.set_global_policy('mixed_float16')
-
-# Désactiver les messages de log TensorFlow
-tf.get_logger().setLevel('ERROR')
-
 # Spécifiez le chemin vers le projet DeepDanbooru
 project_path = './models/deepdanbooru'
 
-# Charger le modèle sur le GPU si possible
+# Charger le modèle sans le compiler pour laisser le choix du périphérique plus tard
 model = dd.project.load_model_from_project(project_path, compile_model=False)
 
 # Charger les tags associés
@@ -41,8 +26,14 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'saku_dn': ['green_eyes', 'glasses', 'brown_hair', 'long_hair', 'asymmetrical_bangs', 'hair_behind_ears'],
-    'yuri_dn': ['purple_eyes', 'purple_hair', 'long_hair', 'parted_bangs', 'straight_hair']
+    'akame_agk': ['black_hair', 'long_hair', 'straight_hair', 'red_eyes', 'bangs'],
+    'chelsea_agk': ['long_hair', 'pink_hair', 'wavy_hair', 'ahoge', 'hair_behind_ears', 'red_eyes', 'hair_ribbon', 'headphones', 'bangs', 'hair_over_shoulder'],
+    'Esdeath_agk': ['long_hair', 'light_blue_hair', 'straight_hair', 'blue_eyes', 'hat', 'ahoge'],
+    'kurome_agk': ['short_hair', 'black_hair', 'straight_hair', 'bangs', 'hair_between_eyes', 'black_eyes'],
+    'leone_agk': ['blonde_hair', 'yellow_eyes', 'messy_hair', 'medium_hair', 'bangs', 'ahoge', 'hair_over_shoulders','side_locks'],
+    'mine_agk': ['pink_hair', 'twin_tails', 'long_hair', 'hair_ribbon', 'hair_between_eyes', 'bangs', 'pink_eyes'],
+    'seryu_agk': ['brown_hair', 'long_hair', 'ponytail', 'bangs', 'hair_behind_ears', 'brown_eyes', 'hair_stick'],
+    'sheele_agk': ['purple_hair', 'long_hair', 'glasses', 'bangs', 'hair_between_eyes', 'hair_ornament', 'purple_eyes', 'straight_hair', 'side_bangs']   
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -59,11 +50,13 @@ def load_all_images_from_subfolder(image_paths, width, height):
     return images  # Retourne une liste d'images redimensionnées
 
 # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
-def predict_image_tags_batch(images, image_paths, threshold=0.5):
+def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gpu'):
     images = np.stack(images, axis=0)  # Convertir en tableau numpy pour l'inférence
+    
+    device = '/GPU:0' if device_type == 'gpu' else '/CPU:0'
     try:
-        # Essayer d'effectuer la prédiction sur le GPU
-        with tf.device('/GPU:0'):
+        # Essayer d'effectuer la prédiction sur le périphérique sélectionné
+        with tf.device(device):
             predictions = model.predict(images, verbose=0)
     except tf.errors.ResourceExhaustedError:
         print("Mémoire GPU insuffisante, basculement vers le CPU.")
@@ -99,7 +92,7 @@ def clean_previous_classifications(destination_folder, subfolder_name):
                     print(f"Suppression du fichier existant : {file_path}")
 
 # Fonction pour traiter un sous-dossier
-def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=16):
+def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=16, device_type='gpu'):
     subfolder_name = os.path.basename(subfolder_path)
     print(f"\nTraitement du dossier : {subfolder_name}")
 
@@ -142,7 +135,7 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
         end_idx = min(start_idx + batch_size, num_images)
         batch_images = images[start_idx:end_idx]
         batch_image_paths = image_paths[start_idx:end_idx]
-        batch_results = predict_image_tags_batch(batch_images, batch_image_paths, threshold=threshold)
+        batch_results = predict_image_tags_batch(batch_images, batch_image_paths, threshold=threshold, device_type=device_type)
 
         # Traiter les résultats du batch
         for image_path, predicted_tags_set, result_tags in batch_results:
@@ -181,7 +174,7 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
     print(f"Le dossier '{subfolder_name}' a été traité.")
 
 # Fonction principale pour traiter tous les sous-dossiers
-def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16):
+def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16, device_type='gpu'):
     subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
     if not subfolders:
         print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}.")
@@ -190,13 +183,13 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match
     for subfolder in subfolders:
         if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'zmisc']:
             continue
-        process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size)
+        process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\3_TO_DETECT\DEKIRU NEKO'
+root_folder = r'F:\3_TO_DETECT\_AKAME GA KILL'
 destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
-    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16)
+    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16, device_type='cpu')
     print(f"Traitement terminé. {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

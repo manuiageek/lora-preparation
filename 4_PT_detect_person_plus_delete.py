@@ -6,22 +6,26 @@ from ultralytics import YOLO
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
-# Déterminer le device (GPU ou CPU)
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# Configuration centrale des paramètres
+device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
+num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
+batch_size_gpu = 12  # Taille de lot pour le GPU
+batch_size_cpu = num_processes  # Taille de lot pour le CPU
+
+# Déterminer le périphérique (GPU ou CPU)
+device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
 print(f"Utilisation du device : {device}")
 
 # Ajuster le nombre de threads CPU pour PyTorch si on est sur CPU
-num_processes = 12  # Utiliser 12 cœurs CPU
 if device == 'cpu':
     torch.set_num_threads(num_processes)
-    batch_size = num_processes  # Tester une taille de lot plus élevée pour le CPU
+    batch_size = batch_size_cpu
 else:
-    batch_size = 18  # Taille de lot pour le GPU
+    batch_size = batch_size_gpu
 
 # Charger le modèle YOLOv8 animeface pré-entraîné
 model_path = Path('models') / 'yolov8x6_animeface.pt'
 model = YOLO(str(model_path))  # Charger le modèle
-model.to(device)  # Envoyer le modèle sur le GPU ou CPU
 
 # Répertoire de base contenant les sous-dossiers
 base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma San no Sara - Tootsuki Ressha-hen"
@@ -37,10 +41,11 @@ def load_and_resize_image(image_path):
     return None, image_path
 
 # Fonction pour traiter un lot d'images (GPU ou CPU)
-def process_batch(images_batch, paths_batch):
-    global device  # Utiliser la variable globale pour vérifier et basculer le périphérique
-
+def process_batch(images_batch, paths_batch, model, device_type='gpu'):
     try:
+        device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
+        model.to(device)  # Envoyer le modèle sur le périphérique sélectionné
+        
         if device == 'cuda':
             autocast_context = torch.amp.autocast('cuda')
         else:
@@ -66,12 +71,10 @@ def process_batch(images_batch, paths_batch):
     
     except torch.cuda.OutOfMemoryError:
         print("Mémoire GPU insuffisante, basculement vers le CPU.")
-        device = 'cpu'  # Basculer sur le CPU
-        model.to(device)  # Envoyer le modèle sur le CPU
-        process_batch(images_batch, paths_batch)  # Retenter le traitement sur le CPU
+        process_batch(images_batch, paths_batch, model, 'cpu')  # Retenter le traitement sur le CPU
 
 # Fonction pour traiter un sous-dossier complet en parallèle (redimensionnement sur CPU)
-def process_subfolder(subfolder, batch_size):
+def process_subfolder(subfolder, batch_size, model, device_type='gpu', num_processes=12):
     images_in_memory = []
     paths_in_memory = []
 
@@ -98,13 +101,13 @@ def process_subfolder(subfolder, batch_size):
         paths_batch.append(image_path)
 
         if len(images_batch) == batch_size:
-            process_batch(images_batch, paths_batch)
+            process_batch(images_batch, paths_batch, model, device_type)
             images_batch = []  # Réinitialiser le lot après traitement
             paths_batch = []
 
     # Traiter les images restantes dans le sous-dossier
     if images_batch:
-        process_batch(images_batch, paths_batch)
+        process_batch(images_batch, paths_batch, model, device_type)
 
 # Utiliser `if __name__ == '__main__':` pour éviter les problèmes avec multiprocessing sur Windows
 if __name__ == '__main__':
@@ -113,5 +116,5 @@ if __name__ == '__main__':
         subfolder_path = os.path.join(base_folder, subdir)
         if os.path.isdir(subfolder_path):
             print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
-            process_subfolder(subfolder_path, batch_size)
+            process_subfolder(subfolder_path, batch_size, model, device_type=device_type, num_processes=num_processes)
             print(f"Traitement du sous-dossier {subfolder_path} terminé. {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
