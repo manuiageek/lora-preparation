@@ -1,6 +1,7 @@
 import os
 import cv2
 import torch
+import psutil  # Importer psutil pour l'affinité CPU sur Windows
 from datetime import datetime
 from ultralytics import YOLO
 from pathlib import Path
@@ -9,12 +10,17 @@ from concurrent.futures import ThreadPoolExecutor
 # Configuration centrale des paramètres
 device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
 num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
-batch_size_gpu = 12  # Taille de lot pour le GPU
+batch_size_gpu = 6  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
-print(f"Utilisation du device : {device}")
+print(f"Utilisation du périphérique : {device}")
+
+# Configuration de l'affinité des cœurs CPU pour le script GPU
+if device == 'cuda':
+    p = psutil.Process()  # Obtenir le processus actuel
+    p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])  # Utiliser les cœurs physiques 0-3 et leurs HT 16-19
 
 # Ajuster le nombre de threads CPU pour PyTorch si on est sur CPU
 if device == 'cpu':
@@ -28,7 +34,7 @@ model_path = Path('models') / 'yolov8x6_animeface.pt'
 model = YOLO(str(model_path))  # Charger le modèle
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma San no Sara - Tootsuki Ressha-hen"
+base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma Shin no Sara"
 
 # Taille de l'image pour réduire l'utilisation de la VRAM
 target_size = (640, 640)  # Redimensionner les images à 640x640
@@ -117,4 +123,5 @@ if __name__ == '__main__':
         if os.path.isdir(subfolder_path):
             print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
             process_subfolder(subfolder_path, batch_size, model, device_type=device_type, num_processes=num_processes)
-            print(f"Traitement du sous-dossier {subfolder_path} terminé. {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"Traitement du sous-dossier {subfolder_path} terminé.")
+            print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

@@ -8,9 +8,28 @@ from datetime import datetime
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
 from concurrent.futures import ThreadPoolExecutor
+import psutil  # Importer psutil pour l'affinité CPU sur Windows
 
-# Définir le nombre de cœurs CPU à utiliser
-NUM_CORES = 12
+# Configuration centrale des paramètres
+device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
+NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
+vram_limit = 2560  # Limite de mémoire GPU en méga-octets (2.5 Go)
+
+# Définir l'affinité des cœurs CPU pour le script TensorFlow
+if device_type == 'gpu':
+    p = psutil.Process()  # Obtenir le processus actuel
+    p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])  # Utiliser les cœurs physiques 4-7 et leurs HT 20-23
+
+# Limiter la mémoire GPU avec TensorFlow
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus and device_type == 'gpu':
+    try:
+        tf.config.experimental.set_virtual_device_configuration(
+            gpus[0],
+            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=vram_limit)]
+        )
+    except RuntimeError as e:
+        print(e)
 
 # Spécifiez le chemin vers le projet DeepDanbooru
 project_path = './models/deepdanbooru'
@@ -30,10 +49,10 @@ characters = {
     'chelsea_agk': ['long_hair', 'pink_hair', 'wavy_hair', 'ahoge', 'hair_behind_ears', 'red_eyes', 'hair_ribbon', 'headphones', 'bangs', 'hair_over_shoulder'],
     'Esdeath_agk': ['long_hair', 'light_blue_hair', 'straight_hair', 'blue_eyes', 'hat', 'ahoge'],
     'kurome_agk': ['short_hair', 'black_hair', 'straight_hair', 'bangs', 'hair_between_eyes', 'black_eyes'],
-    'leone_agk': ['blonde_hair', 'yellow_eyes', 'messy_hair', 'medium_hair', 'bangs', 'ahoge', 'hair_over_shoulders','side_locks'],
+    'leone_agk': ['blonde_hair', 'yellow_eyes', 'messy_hair', 'medium_hair', 'bangs', 'ahoge', 'hair_over_shoulders', 'side_locks'],
     'mine_agk': ['pink_hair', 'twin_tails', 'long_hair', 'hair_ribbon', 'hair_between_eyes', 'bangs', 'pink_eyes'],
     'seryu_agk': ['brown_hair', 'long_hair', 'ponytail', 'bangs', 'hair_behind_ears', 'brown_eyes', 'hair_stick'],
-    'sheele_agk': ['purple_hair', 'long_hair', 'glasses', 'bangs', 'hair_between_eyes', 'hair_ornament', 'purple_eyes', 'straight_hair', 'side_bangs']   
+    'sheele_agk': ['purple_hair', 'long_hair', 'glasses', 'bangs', 'hair_between_eyes', 'hair_ornament', 'purple_eyes', 'straight_hair', 'side_bangs']
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -52,7 +71,7 @@ def load_all_images_from_subfolder(image_paths, width, height):
 # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
 def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gpu'):
     images = np.stack(images, axis=0)  # Convertir en tableau numpy pour l'inférence
-    
+
     device = '/GPU:0' if device_type == 'gpu' else '/CPU:0'
     try:
         # Essayer d'effectuer la prédiction sur le périphérique sélectionné
@@ -82,7 +101,7 @@ def clean_previous_classifications(destination_folder, subfolder_name):
     # Parcourir tous les dossiers de destination et supprimer les fichiers qui commencent par "subfolder_name_"
     folders_to_clean = [os.path.join(destination_folder, character) for character in characters] + \
                        [os.path.join(destination_folder, 'zboy'), os.path.join(destination_folder, 'zmisc')]
-    
+
     for folder in folders_to_clean:
         if os.path.exists(folder):
             for file in os.listdir(folder):
@@ -143,7 +162,6 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
             has_girl = any('girl' in tag for tag in predicted_tags_set)
 
             if has_boy and not has_girl:
-                # Nouveau nom de fichier avec le nom du sous-dossier
                 new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                 destination_path = os.path.join(zboy_folder, new_filename)
                 shutil.copy2(image_path, destination_path)
@@ -159,13 +177,11 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
 
                 if image_characters:
                     for character in image_characters:
-                        # Nouveau nom de fichier avec le nom du sous-dossier
                         new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                         destination_path = os.path.join(character_folders[character], new_filename)
                         shutil.copy2(image_path, destination_path)
                     print(f"L'image '{image_path}' a été classée dans : {', '.join(image_characters)}")
                 else:
-                    # Nouveau nom de fichier avec le nom du sous-dossier
                     new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                     destination_path = os.path.join(zmisc_folder, new_filename)
                     shutil.copy2(image_path, destination_path)
@@ -191,5 +207,5 @@ destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
-    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16, device_type='cpu')
-    print(f"Traitement terminé. {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16, device_type=device_type)
+    print(f"Traitement terminé le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

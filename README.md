@@ -20,7 +20,7 @@ conda create -n tflow_env python=3.10
 conda activate tflow_env
 conda install cudatoolkit=11.8 cudnn=8.6 -c conda-forge
 pip install tensorflow==2.10.0
-pip install numpy pillow tensorflow-io deepdanbooru
+pip install numpy pillow tensorflow-io deepdanbooru psutil
 
 check TensorFlow GPU :
 python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
