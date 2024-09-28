@@ -1,9 +1,0 @@
-# Dictionnaire des personnages avec leurs caractéristiques (tags)
-characters = {
-    'akemi_dnm': ['bangs', 'black_hair', 'blunt_bangs', 'long_hair', 'blue_eyes'],
-    'ayaka_dnm': ['brown_hair', 'bun', 'dark_skin', 'hair_behind_ear', 'hair_ornament', 'single_hair_bun', 'yellow_eyes'],
-    'crystal_dnm': ['blue_eyes', 'long_hair', 'silver_hair'],
-    'gina_dnm': ['blue_eyes', 'bob_cut', 'blunt_bangs', 'short_hair', 'white_hair'],
-    'hibiki_dnm': ['blonde_hair', 'green_eyes', 'long_hair', 'twintails', 'bangs'],
-    'satomi_dnm': ['black_hair', 'brown_eyes', 'short_hair']
-}

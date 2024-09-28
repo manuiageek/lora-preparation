@@ -1,6 +1,7 @@
 import os
 import cv2
 import torch
+from datetime import datetime
 from ultralytics import YOLO
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -10,12 +11,12 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Utilisation du device : {device}")
 
 # Ajuster le nombre de threads CPU pour PyTorch si on est sur CPU
-num_processes = 16  # Utiliser 16 cœurs CPU
+num_processes = 12  # Utiliser 12 cœurs CPU
 if device == 'cpu':
     torch.set_num_threads(num_processes)
     batch_size = num_processes  # Tester une taille de lot plus élevée pour le CPU
 else:
-    batch_size = 20  # Taille de lot pour le GPU
+    batch_size = 18  # Taille de lot pour le GPU
 
 # Charger le modèle YOLOv8 animeface pré-entraîné
 model_path = Path('models') / 'yolov8x6_animeface.pt'
@@ -23,7 +24,7 @@ model = YOLO(str(model_path))  # Charger le modèle
 model.to(device)  # Envoyer le modèle sur le GPU ou CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma Gou no Sara"
+base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma San no Sara - Tootsuki Ressha-hen"
 
 # Taille de l'image pour réduire l'utilisation de la VRAM
 target_size = (640, 640)  # Redimensionner les images à 640x640
@@ -113,4 +114,4 @@ if __name__ == '__main__':
         if os.path.isdir(subfolder_path):
             print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
             process_subfolder(subfolder_path, batch_size)
-            print(f"Traitement du sous-dossier {subfolder_path} terminé.")
+            print(f"Traitement du sous-dossier {subfolder_path} terminé. {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

@@ -4,9 +4,13 @@ from PIL import Image
 import os
 import glob
 import shutil
+from datetime import datetime
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
 from concurrent.futures import ThreadPoolExecutor
+
+# Définir le nombre de cœurs CPU à utiliser
+NUM_CORES = 12
 
 # Limiter la croissance de la mémoire du GPU
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -50,7 +54,7 @@ def load_and_resize_image(image_path, width, height):
 
 # Fonction pour charger toutes les images d'un sous-dossier dans la RAM
 def load_all_images_from_subfolder(image_paths, width, height):
-    with ThreadPoolExecutor(max_workers=12) as executor:  # Utiliser 12 cœurs pour le redimensionnement
+    with ThreadPoolExecutor(max_workers=NUM_CORES) as executor:  # Utiliser le nombre de cœurs défini
         images = list(executor.map(lambda p: load_and_resize_image(p, width, height), image_paths))
     return images  # Retourne une liste d'images redimensionnées
 
@@ -195,3 +199,4 @@ destination_folder = root_folder
 # Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
     process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16)
+    print(f"Traitement terminé. {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
