@@ -8,6 +8,15 @@ import tensorflow as tf
 from tensorflow.keras import mixed_precision
 from concurrent.futures import ThreadPoolExecutor
 
+# Limiter la croissance de la mémoire du GPU
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
 # Activer le mode de précision mixte
 mixed_precision.set_global_policy('mixed_float16')
 
@@ -17,7 +26,7 @@ tf.get_logger().setLevel('ERROR')
 # Spécifiez le chemin vers le projet DeepDanbooru
 project_path = './models/deepdanbooru'
 
-# Charger le modèle
+# Charger le modèle sur le GPU si possible
 model = dd.project.load_model_from_project(project_path, compile_model=False)
 
 # Charger les tags associés
@@ -28,12 +37,8 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'akemi_dnm': ['bangs', 'black_hair', 'blunt_bangs', 'long_hair', 'blue_eyes'],
-    'ayaka_dnm': ['brown_hair', 'bun', 'dark_skin', 'hair_behind_ear', 'hair_ornament', 'single_hair_bun', 'yellow_eyes'],
-    'crystal_dnm': ['blue_eyes', 'long_hair', 'silver_hair'],
-    'gina_dnm': ['blue_eyes', 'bob_cut', 'blunt_bangs', 'short_hair', 'white_hair'],
-    'hibiki_dnm': ['blonde_hair', 'green_eyes', 'long_hair', 'twintails', 'bangs'],
-    'satomi_dnm': ['black_hair', 'brown_eyes', 'short_hair']
+    'saku_dn': ['green_eyes', 'glasses', 'brown_hair', 'long_hair', 'asymmetrical_bangs', 'hair_behind_ears'],
+    'yuri_dn': ['purple_eyes', 'purple_hair', 'long_hair', 'parted_bangs', 'straight_hair']
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -51,9 +56,16 @@ def load_all_images_from_subfolder(image_paths, width, height):
 
 # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
 def predict_image_tags_batch(images, image_paths, threshold=0.5):
-    # Faire une prédiction sur le GPU
     images = np.stack(images, axis=0)  # Convertir en tableau numpy pour l'inférence
-    predictions = model.predict(images, verbose=0)
+    try:
+        # Essayer d'effectuer la prédiction sur le GPU
+        with tf.device('/GPU:0'):
+            predictions = model.predict(images, verbose=0)
+    except tf.errors.ResourceExhaustedError:
+        print("Mémoire GPU insuffisante, basculement vers le CPU.")
+        # Effectuer la prédiction sur le CPU en cas d'erreur de mémoire GPU
+        with tf.device('/CPU:0'):
+            predictions = model.predict(images, verbose=0)
 
     # Convertir les prédictions en float32 pour éviter les problèmes de compatibilité
     predictions = predictions.astype(np.float32)
@@ -68,10 +80,27 @@ def predict_image_tags_batch(images, image_paths, threshold=0.5):
         batch_results.append((image_paths[idx], predicted_tags_set, result_tags))
     return batch_results
 
+# Fonction pour nettoyer les fichiers précédemment classés
+def clean_previous_classifications(destination_folder, subfolder_name):
+    # Parcourir tous les dossiers de destination et supprimer les fichiers qui commencent par "subfolder_name_"
+    folders_to_clean = [os.path.join(destination_folder, character) for character in characters] + \
+                       [os.path.join(destination_folder, 'zboy'), os.path.join(destination_folder, 'zmisc')]
+    
+    for folder in folders_to_clean:
+        if os.path.exists(folder):
+            for file in os.listdir(folder):
+                if file.startswith(f"{subfolder_name}_"):
+                    file_path = os.path.join(folder, file)
+                    os.remove(file_path)
+                    print(f"Suppression du fichier existant : {file_path}")
+
 # Fonction pour traiter un sous-dossier
 def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=16):
     subfolder_name = os.path.basename(subfolder_path)
     print(f"\nTraitement du dossier : {subfolder_name}")
+
+    # Nettoyer les fichiers déjà classés pour ce sous-dossier
+    clean_previous_classifications(destination_folder, subfolder_name)
 
     # Obtenir la liste des fichiers d'images dans le sous-dossier
     image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp')
@@ -117,7 +146,9 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
             has_girl = any('girl' in tag for tag in predicted_tags_set)
 
             if has_boy and not has_girl:
-                destination_path = os.path.join(zboy_folder, os.path.basename(image_path))
+                # Nouveau nom de fichier avec le nom du sous-dossier
+                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                destination_path = os.path.join(zboy_folder, new_filename)
                 shutil.copy2(image_path, destination_path)
                 print(f"L'image '{image_path}' a été classée dans 'zboy'.")
             else:
@@ -131,11 +162,15 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
 
                 if image_characters:
                     for character in image_characters:
-                        destination_path = os.path.join(character_folders[character], os.path.basename(image_path))
+                        # Nouveau nom de fichier avec le nom du sous-dossier
+                        new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                        destination_path = os.path.join(character_folders[character], new_filename)
                         shutil.copy2(image_path, destination_path)
                     print(f"L'image '{image_path}' a été classée dans : {', '.join(image_characters)}")
                 else:
-                    destination_path = os.path.join(zmisc_folder, os.path.basename(image_path))
+                    # Nouveau nom de fichier avec le nom du sous-dossier
+                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                    destination_path = os.path.join(zmisc_folder, new_filename)
                     shutil.copy2(image_path, destination_path)
                     print(f"L'image '{image_path}' a été classée dans 'zmisc'.")
 
@@ -154,7 +189,7 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size)
 
 # Chemin vers le dossier contenant les images
-root_folder = r'images'
+root_folder = r'F:\3_TO_DETECT\DEKIRU NEKO'
 destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers

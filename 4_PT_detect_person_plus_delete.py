@@ -17,13 +17,13 @@ if device == 'cpu':
 else:
     batch_size = 20  # Taille de lot pour le GPU
 
-# Charger le modèle YOLOv8 animeface pré-entraîné sur le GPU
+# Charger le modèle YOLOv8 animeface pré-entraîné
 model_path = Path('models') / 'yolov8x6_animeface.pt'
 model = YOLO(str(model_path))  # Charger le modèle
-model.to(device)  # Envoyer le modèle sur le GPU
+model.to(device)  # Envoyer le modèle sur le GPU ou CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma"
+base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma Gou no Sara"
 
 # Taille de l'image pour réduire l'utilisation de la VRAM
 target_size = (640, 640)  # Redimensionner les images à 640x640
@@ -35,30 +35,39 @@ def load_and_resize_image(image_path):
         return cv2.resize(img, target_size), image_path
     return None, image_path
 
-# Fonction pour traiter un lot d'images (GPU)
+# Fonction pour traiter un lot d'images (GPU ou CPU)
 def process_batch(images_batch, paths_batch):
-    if device == 'cuda':
-        autocast_context = torch.amp.autocast('cuda')  # Correction du contexte AMP
-    else:
-        autocast_context = torch.no_grad()  # Sur CPU, utiliser torch.no_grad()
+    global device  # Utiliser la variable globale pour vérifier et basculer le périphérique
 
-    with autocast_context:
-        # Désactiver les logs de prédiction en ajoutant verbose=False
-        results = model(images_batch, verbose=False)  # Appeler directement l'inférence sur les images (numpy.ndarray)
-
-    for i, result in enumerate(results):
-        animeface_detected = False
-
-        for detection in result.boxes.data:
-            if int(detection[-1]) == 0:  # Classe 0 pour les visages d'anime
-                animeface_detected = True
-                break
-
-        if not animeface_detected:
-            print(f"Rien détecté dans : {paths_batch[i]}. Suppression ...")
-            os.remove(paths_batch[i])
+    try:
+        if device == 'cuda':
+            autocast_context = torch.amp.autocast('cuda')
         else:
-            print(f"Image OK : {paths_batch[i]}")
+            autocast_context = torch.no_grad()  # Sur CPU, utiliser torch.no_grad()
+
+        with autocast_context:
+            # Désactiver les logs de prédiction en ajoutant verbose=False
+            results = model(images_batch, verbose=False)  # Appeler directement l'inférence sur les images (numpy.ndarray)
+
+        for i, result in enumerate(results):
+            animeface_detected = False
+
+            for detection in result.boxes.data:
+                if int(detection[-1]) == 0:  # Classe 0 pour les visages d'anime
+                    animeface_detected = True
+                    break
+
+            if not animeface_detected:
+                print(f"Rien détecté dans : {paths_batch[i]}. Suppression ...")
+                os.remove(paths_batch[i])
+            else:
+                print(f"Image OK : {paths_batch[i]}")
+    
+    except torch.cuda.OutOfMemoryError:
+        print("Mémoire GPU insuffisante, basculement vers le CPU.")
+        device = 'cpu'  # Basculer sur le CPU
+        model.to(device)  # Envoyer le modèle sur le CPU
+        process_batch(images_batch, paths_batch)  # Retenter le traitement sur le CPU
 
 # Fonction pour traiter un sous-dossier complet en parallèle (redimensionnement sur CPU)
 def process_subfolder(subfolder, batch_size):
@@ -79,7 +88,7 @@ def process_subfolder(subfolder, batch_size):
                 images_in_memory.append(img_resized)
                 paths_in_memory.append(image_path)
 
-    # Traiter les images par lots (inférence sur GPU)
+    # Traiter les images par lots (inférence sur GPU ou CPU)
     images_batch = []
     paths_batch = []
 
