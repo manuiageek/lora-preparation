@@ -11,9 +11,10 @@ from concurrent.futures import ThreadPoolExecutor
 import psutil  # Importer psutil pour l'affinité CPU sur Windows
 
 # Configuration centrale des paramètres
+BATCH_SIZE = 8  # Taille du batch pour le traitement des images
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
 NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
-vram_limit = 2560  # Limite de mémoire GPU en méga-octets (2.5 Go)
+vram_limit = 4500   # Limite de mémoire GPU en méga-octets
 
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
 if device_type == 'gpu':
@@ -45,14 +46,13 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'akame_agk': ['black_hair', 'long_hair', 'straight_hair', 'red_eyes', 'bangs'],
-    'chelsea_agk': ['long_hair', 'pink_hair', 'wavy_hair', 'ahoge', 'hair_behind_ears', 'red_eyes', 'hair_ribbon', 'headphones', 'bangs', 'hair_over_shoulder'],
-    'Esdeath_agk': ['long_hair', 'light_blue_hair', 'straight_hair', 'blue_eyes', 'hat', 'ahoge'],
-    'kurome_agk': ['short_hair', 'black_hair', 'straight_hair', 'bangs', 'hair_between_eyes', 'black_eyes'],
-    'leone_agk': ['blonde_hair', 'yellow_eyes', 'messy_hair', 'medium_hair', 'bangs', 'ahoge', 'hair_over_shoulders', 'side_locks'],
-    'mine_agk': ['pink_hair', 'twin_tails', 'long_hair', 'hair_ribbon', 'hair_between_eyes', 'bangs', 'pink_eyes'],
-    'seryu_agk': ['brown_hair', 'long_hair', 'ponytail', 'bangs', 'hair_behind_ears', 'brown_eyes', 'hair_stick'],
-    'sheele_agk': ['purple_hair', 'long_hair', 'glasses', 'bangs', 'hair_between_eyes', 'hair_ornament', 'purple_eyes', 'straight_hair', 'side_bangs']
+    'balalaika_bl': ['blonde_hair', 'long_hair', 'wavy_hair', 'blue_eyes', 'bangs', 'ahoge','scar'],
+    'eda_bl': ['blonde_hair', 'short_hair', 'bangs', 'narrow_eyes'],    
+    'fabiola_bl': ['brown_hair', 'short_hair', 'asymmetrical_bangs', 'ahoge', 'brown_eyes'],     
+    'gretel_bl': ['silver_hair', 'long_hair', 'straight_hair', 'blunt_bangs', 'purple_eyes'],     
+    'revy_bl': ['brown_hair','long_hair', 'ponytail', 'bangs','side_locks', 'brown_eyes', 'tan_skin'],         
+    'roberta_bl': ['black_hair', 'braid', 'blunt_bangs','long_hair'],        
+    'shenhua_bl': ['black_hair', 'long_hair', 'straight_hair', 'sharp_eyes']    
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -111,7 +111,7 @@ def clean_previous_classifications(destination_folder, subfolder_name):
                     print(f"Suppression du fichier existant : {file_path}")
 
 # Fonction pour traiter un sous-dossier
-def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=16, device_type='gpu'):
+def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=BATCH_SIZE, device_type='gpu'):
     subfolder_name = os.path.basename(subfolder_path)
     print(f"\nTraitement du dossier : {subfolder_name}")
 
@@ -190,7 +190,7 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
     print(f"Le dossier '{subfolder_name}' a été traité.")
 
 # Fonction principale pour traiter tous les sous-dossiers
-def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16, device_type='gpu'):
+def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=BATCH_SIZE, device_type='gpu'):
     subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
     if not subfolders:
         print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}.")
@@ -202,10 +202,10 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\3_TO_DETECT\_AKAME GA KILL'
+root_folder = r'F:\3_TO_DETECT\BLACK LAGOON'
 destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
-    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=16, device_type=device_type)
+    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=BATCH_SIZE, device_type=device_type)
     print(f"Traitement terminé le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

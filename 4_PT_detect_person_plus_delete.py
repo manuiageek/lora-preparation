@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 # Configuration centrale des paramètres
 device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
 num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
-batch_size_gpu = 6  # Taille de lot pour le GPU
+batch_size_gpu = 16  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Déterminer le périphérique (GPU ou CPU)
@@ -34,7 +34,7 @@ model_path = Path('models') / 'yolov8x6_animeface.pt'
 model = YOLO(str(model_path))  # Charger le modèle
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\2_TO_EPURATE\SHOKUGEKI NO SOUMA\Shokugeki no Souma Shin no Sara"
+base_folder = r"F:\2_TO_EPURATE\CLASSROOM OF THE ELITE"
 
 # Taille de l'image pour réduire l'utilisation de la VRAM
 target_size = (640, 640)  # Redimensionner les images à 640x640
