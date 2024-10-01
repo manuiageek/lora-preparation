@@ -1,22 +1,37 @@
 import os
 from PIL import Image
 import imagehash
+from concurrent.futures import ThreadPoolExecutor
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
 THRESHOLD = 6   # Contrôle la tolérance pour considérer deux images comme doublons
+
+def compute_image_hash(image_path):
+    """Calcule le hachage perceptuel d'une image."""
+    try:
+        img_hash = imagehash.average_hash(Image.open(image_path), hash_size=HASH_SIZE)
+        return (image_path, img_hash)
+    except Exception as e:
+        print(f"Erreur lors du traitement de l'image {image_path}: {e}")
+        return None
 
 def find_and_remove_duplicates(directory):
     # Stocker les hachages des images
     hashes = {}
     duplicates = []
 
-    # Parcourir toutes les images dans le répertoire
-    for image_name in os.listdir(directory):
-        if image_name.endswith('.jpg'):
-            image_path = os.path.join(directory, image_name)
-            # Calculer le hachage perceptuel de l'image
-            img_hash = imagehash.average_hash(Image.open(image_path), hash_size=HASH_SIZE)
+    # Récupérer tous les fichiers image du répertoire
+    image_files = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.jpg')]
+
+    # Calculer les hachages des images en parallèle
+    with ThreadPoolExecutor() as executor:
+        results = executor.map(compute_image_hash, image_files)
+
+    # Traiter les résultats
+    for result in results:
+        if result:
+            image_path, img_hash = result
             
             # Vérifier si un hachage similaire existe déjà
             duplicate_found = False
