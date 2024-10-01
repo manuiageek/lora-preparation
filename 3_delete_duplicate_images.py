@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
-THRESHOLD = 6   # Contrôle la tolérance pour considérer deux images comme doublons
+THRESHOLD = 1   # Contrôle la tolérance pour considérer deux images comme doublons
 
 def compute_image_hash(image_path):
     """Calcule le hachage perceptuel d'une image."""

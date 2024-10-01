@@ -100,7 +100,7 @@ def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gp
 def clean_previous_classifications(destination_folder, subfolder_name):
     # Parcourir tous les dossiers de destination et supprimer les fichiers qui commencent par "subfolder_name_"
     folders_to_clean = [os.path.join(destination_folder, character) for character in characters] + \
-                       [os.path.join(destination_folder, 'zboy'), os.path.join(destination_folder, 'zmisc')]
+                       [os.path.join(destination_folder, 'zboy'), os.path.join(destination_folder, 'zgirl'), os.path.join(destination_folder, 'zmisc')]
 
     for folder in folders_to_clean:
         if os.path.exists(folder):
@@ -144,6 +144,10 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
     if not os.path.exists(zboy_folder):
         os.makedirs(zboy_folder)
 
+    zgirl_folder = os.path.join(destination_folder, 'zgirl')
+    if not os.path.exists(zgirl_folder):
+        os.makedirs(zgirl_folder)
+
     zmisc_folder = os.path.join(destination_folder, 'zmisc')
     if not os.path.exists(zmisc_folder):
         os.makedirs(zmisc_folder)
@@ -182,10 +186,16 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
                         shutil.copy2(image_path, destination_path)
                     print(f"L'image '{image_path}' a été classée dans : {', '.join(image_characters)}")
                 else:
-                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                    destination_path = os.path.join(zmisc_folder, new_filename)
-                    shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans 'zmisc'.")
+                    if has_girl:  # Classe dans 'zgirl' si une fille est détectée mais pas de personnage spécifique
+                        new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                        destination_path = os.path.join(zgirl_folder, new_filename)
+                        shutil.copy2(image_path, destination_path)
+                        print(f"L'image '{image_path}' a été classée dans 'zgirl'.")
+                    else:
+                        new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                        destination_path = os.path.join(zmisc_folder, new_filename)
+                        shutil.copy2(image_path, destination_path)
+                        print(f"L'image '{image_path}' a été classée dans 'zmisc'.")
 
     print(f"Le dossier '{subfolder_name}' a été traité.")
 
@@ -197,7 +207,7 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match
         return
 
     for subfolder in subfolders:
-        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'zmisc']:
+        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'zgirl', 'zmisc']:
             continue
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
