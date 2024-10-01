@@ -1,8 +1,8 @@
 Some python scripts (written with the help of chatgpt) that I use to prepare LoRA (Low Rank Adaptation) training for anime characters.
 - 1_rename_mkv.py : it renames the titles of mkv episode to "01", "02" and so forth
 - 2_ffmpeg_extr_jpg.py : extract frames from mkv with ffmpeg tool
-- 3_delete_duplicate_images.py 
-- 4_detect_person_plus_delete.py : it loads yolov8x6_animeface model in order to check if AI can find a "face" inside loop of images in a folder. Deleting any image that doesn't contain "anime face" in the frame to save disk space.
+- 3_delete_duplicate_images.py : pip install imagehash pillow
+- 4_detect_person_or_delete.py : it loads yolov8x6_animeface model in order to check if AI can find a "face" inside loop of images in a folder. Deleting any image that doesn't contain "anime face" in the frame to save disk space.
 - 5_character_categorisation.py : https://github.com/KichangKim/DeepDanbooru/releases
 - 6_batch_rename_resize_convertojpg.py
 - 7_Comfyui_PREPLORA.json : workflow for comfyui

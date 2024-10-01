@@ -8,13 +8,13 @@ from datetime import datetime
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
 from concurrent.futures import ThreadPoolExecutor
-import psutil  # Importer psutil pour l'affinité CPU sur Windows
+import psutil
 
 # Configuration centrale des paramètres
 BATCH_SIZE = 8  # Taille du batch pour le traitement des images
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
 NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
-vram_limit = 4500   # Limite de mémoire GPU en méga-octets
+vram_limit = 4500  # Limite de mémoire GPU en méga-octets
 
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
 if device_type == 'gpu':
@@ -46,13 +46,11 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'balalaika_bl': ['blonde_hair', 'long_hair', 'wavy_hair', 'blue_eyes', 'bangs', 'ahoge','scar'],
-    'eda_bl': ['blonde_hair', 'short_hair', 'bangs', 'narrow_eyes'],    
-    'fabiola_bl': ['brown_hair', 'short_hair', 'asymmetrical_bangs', 'ahoge', 'brown_eyes'],     
-    'gretel_bl': ['silver_hair', 'long_hair', 'straight_hair', 'blunt_bangs', 'purple_eyes'],     
-    'revy_bl': ['brown_hair','long_hair', 'ponytail', 'bangs','side_locks', 'brown_eyes', 'tan_skin'],         
-    'roberta_bl': ['black_hair', 'braid', 'blunt_bangs','long_hair'],        
-    'shenhua_bl': ['black_hair', 'long_hair', 'straight_hair', 'sharp_eyes']    
+    'balalaika_bl': ['blonde_hair', 'long_hair', 'wavy_hair', 'blue_eyes', 'bangs', 'ahoge', 'scar'],
+    'fabiola_bl': ['brown_hair', 'short_hair', 'asymmetrical_bangs', 'ahoge', 'brown_eyes'],
+    'revy_bl': ['brown_hair', 'long_hair', 'ponytail', 'bangs', 'side_locks', 'brown_eyes', 'tan_skin'],
+    'roberta_bl': ['black_hair', 'braid', 'blunt_bangs', 'long_hair'],
+    'shenhua_bl': ['black_hair', 'long_hair', 'straight_hair', 'sharp_eyes']
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -61,6 +59,22 @@ def load_and_resize_image(image_path, width, height):
     image = image.resize((width, height), Image.LANCZOS)
     image = np.array(image, dtype=np.float16) / 255.0  # Utiliser float16 pour la précision mixte
     return image
+
+# Fonction pour détecter si une image est de nuit en fonction de sa luminosité
+def is_night_image(image_path, dark_threshold=50, dark_pixel_ratio=0.6):
+    """
+    Détecte si une image est prise de nuit en fonction de sa luminosité.
+    - dark_threshold : seuil en dessous duquel un pixel est considéré comme sombre (0-255).
+    - dark_pixel_ratio : proportion de pixels sombres pour qu'une image soit considérée comme de nuit.
+    """
+    image = Image.open(image_path).convert('L')  # Convertir l'image en niveaux de gris
+    pixels = np.array(image)  # Convertir l'image en un tableau numpy
+    num_dark_pixels = np.sum(pixels < dark_threshold)  # Compter les pixels sombres
+    total_pixels = pixels.size  # Nombre total de pixels
+
+    # Calculer la proportion de pixels sombres
+    dark_ratio = num_dark_pixels / total_pixels
+    return dark_ratio >= dark_pixel_ratio  # Retourne True si l'image est considérée comme de nuit
 
 # Fonction pour charger toutes les images d'un sous-dossier dans la RAM
 def load_all_images_from_subfolder(image_paths, width, height):
@@ -79,11 +93,9 @@ def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gp
             predictions = model.predict(images, verbose=0)
     except tf.errors.ResourceExhaustedError:
         print("Mémoire GPU insuffisante, basculement vers le CPU.")
-        # Effectuer la prédiction sur le CPU en cas d'erreur de mémoire GPU
         with tf.device('/CPU:0'):
             predictions = model.predict(images, verbose=0)
 
-    # Convertir les prédictions en float32 pour éviter les problèmes de compatibilité
     predictions = predictions.astype(np.float32)
 
     batch_results = []
@@ -98,9 +110,10 @@ def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gp
 
 # Fonction pour nettoyer les fichiers précédemment classés
 def clean_previous_classifications(destination_folder, subfolder_name):
-    # Parcourir tous les dossiers de destination et supprimer les fichiers qui commencent par "subfolder_name_"
     folders_to_clean = [os.path.join(destination_folder, character) for character in characters] + \
-                       [os.path.join(destination_folder, 'zboy'), os.path.join(destination_folder, 'zgirl'), os.path.join(destination_folder, 'zmisc')]
+                       [os.path.join(destination_folder, 'zboy'), os.path.join(destination_folder, 'zgirl'),
+                        os.path.join(destination_folder, 'zmisc'), os.path.join(destination_folder, 'z_daymisc'),
+                        os.path.join(destination_folder, 'z_nightmisc')]
 
     for folder in folders_to_clean:
         if os.path.exists(folder):
@@ -148,9 +161,13 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
     if not os.path.exists(zgirl_folder):
         os.makedirs(zgirl_folder)
 
-    zmisc_folder = os.path.join(destination_folder, 'zmisc')
-    if not os.path.exists(zmisc_folder):
-        os.makedirs(zmisc_folder)
+    z_daymisc_folder = os.path.join(destination_folder, 'z_daymisc')
+    if not os.path.exists(z_daymisc_folder):
+        os.makedirs(z_daymisc_folder)
+
+    z_nightmisc_folder = os.path.join(destination_folder, 'z_nightmisc')
+    if not os.path.exists(z_nightmisc_folder):
+        os.makedirs(z_nightmisc_folder)
 
     # Traiter les images par lots
     num_images = len(image_paths)
@@ -186,16 +203,22 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
                         shutil.copy2(image_path, destination_path)
                     print(f"L'image '{image_path}' a été classée dans : {', '.join(image_characters)}")
                 else:
-                    if has_girl:  # Classe dans 'zgirl' si une fille est détectée mais pas de personnage spécifique
+                    if has_girl:
                         new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                         destination_path = os.path.join(zgirl_folder, new_filename)
                         shutil.copy2(image_path, destination_path)
                         print(f"L'image '{image_path}' a été classée dans 'zgirl'.")
                     else:
+                        # Déterminer si l'image est de nuit ou de jour
+                        is_night = is_night_image(image_path)
                         new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                        destination_path = os.path.join(zmisc_folder, new_filename)
+                        if is_night:
+                            destination_path = os.path.join(z_nightmisc_folder, new_filename)
+                            print(f"L'image '{image_path}' a été classée dans 'z_nightmisc'.")
+                        else:
+                            destination_path = os.path.join(z_daymisc_folder, new_filename)
+                            print(f"L'image '{image_path}' a été classée dans 'z_daymisc'.")
                         shutil.copy2(image_path, destination_path)
-                        print(f"L'image '{image_path}' a été classée dans 'zmisc'.")
 
     print(f"Le dossier '{subfolder_name}' a été traité.")
 
@@ -207,7 +230,7 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match
         return
 
     for subfolder in subfolders:
-        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'zgirl', 'zmisc']:
+        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'zgirl', 'z_daymisc', 'z_nightmisc']:
             continue
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
@@ -217,5 +240,5 @@ destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
-    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=BATCH_SIZE, device_type=device_type)
+    process_all_subfolders(root_folder, destination_folder, threshold=0.6, match_threshold=0.4, batch_size=BATCH_SIZE, device_type=device_type)
     print(f"Traitement terminé le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

@@ -1,6 +1,7 @@
 import os
 from PIL import Image
 import imagehash
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 # Constantes globales pour le contrôle des valeurs
@@ -71,5 +72,6 @@ def process_all_subdirectories(root_directory):
             print("Aucun doublon trouvé dans ce répertoire.")
 
 # Usage
-output_directory = r"/home/heimana/hleet/yt-dlp"
+output_directory = r"T:\_SELECT\SPY_X_FAMILY"
 process_all_subdirectories(output_directory)
+print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
