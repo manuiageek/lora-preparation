@@ -4,7 +4,7 @@ import imagehash
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
-THRESHOLD = 6  # Contrôle la tolérance pour considérer deux images comme doublons
+THRESHOLD = 6   # Contrôle la tolérance pour considérer deux images comme doublons
 
 def find_and_remove_duplicates(directory):
     # Stocker les hachages des images
@@ -38,13 +38,23 @@ def find_and_remove_duplicates(directory):
     
     return duplicates
 
-# Usage
-output_directory = r"/home/heimana/hleet/yt-dlp/Bora Bora"
-duplicates = find_and_remove_duplicates(output_directory)
+def process_all_subdirectories(root_directory):
+    # Récupérer tous les sous-répertoires dans l'ordre croissant
+    for dirpath, dirnames, _ in os.walk(root_directory):
+        # Trier les sous-répertoires dans l'ordre croissant
+        dirnames.sort()
 
-if duplicates:
-    print("\nRésumé des doublons supprimés :")
-    for dup in duplicates:
-        print(f"Image doublon supprimée : {dup[0]}")
-else:
-    print("Aucun doublon trouvé.")
+        # Traiter chaque répertoire
+        print(f"Traitement du répertoire : {dirpath}")
+        duplicates = find_and_remove_duplicates(dirpath)
+
+        if duplicates:
+            print("\nRésumé des doublons supprimés :")
+            for dup in duplicates:
+                print(f"Image doublon supprimée : {dup[0]}")
+        else:
+            print("Aucun doublon trouvé dans ce répertoire.")
+
+# Usage
+output_directory = r"/home/heimana/hleet/yt-dlp"
+process_all_subdirectories(output_directory)
