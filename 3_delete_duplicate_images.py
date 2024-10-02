@@ -72,6 +72,6 @@ def process_all_subdirectories(root_directory):
             print("Aucun doublon trouvé dans ce répertoire.")
 
 # Usage
-output_directory = r"F:\3_TO_DETECT\GRANCREST SENKI"
+output_directory = r"F:\1_TO_EXTRACT\TERMINATOR ZERO"
 process_all_subdirectories(output_directory)
 print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

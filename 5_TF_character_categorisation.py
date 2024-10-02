@@ -44,30 +44,10 @@ tags = dd.project.load_tags_from_project(project_path)
 # Convertir la liste des tags en un dictionnaire pour un accès plus rapide
 tags_dict = {i: tag for i, tag in enumerate(tags)}
 
-# characters = {
-#   'saku_dn': ['green_eyes', 'glasses', 'brown_hair', 'long_hair', 'asymmetrical_bangs', 'hair_behind_ears'],
-#   'yuri_dn': ['purple_eyes', 'purple_hair', 'long_hair', 'parted_bangs', 'straight_hair'],
-#}
-
-# characters = {
-#    'akemi_dnm': ['bangs', 'black_hair', 'blunt_bangs', 'long_hair', 'blue_eyes'],
-#    'ayaka_dnm': ['brown_hair', 'bun', 'dark_skin', 'hair_behind_ear', 'hair_ornament', 'single_hair_bun', 'yellow_eyes'],
-#    'crystal_dnm': ['blue_eyes', 'long_hair', 'silver_hair'],
-#    'gina_dnm': ['blue_eyes', 'bob_cut', 'blunt_bangs', 'short_hair', 'white_hair'],
-#    'hibiki_dnm': ['blonde_hair', 'green_eyes', 'long_hair', 'twintails', 'bangs'],
-#    'satomi_dnm': ['black_hair', 'brown_eyes', 'short_hair']
-#} 
-
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'akame_agk': ['black_hair', 'long_hair', 'straight_hair', 'red_eyes', 'bangs'],
-    'chelsea_agk': ['long_hair', 'pink_hair', 'wavy_hair', 'ahoge', 'hair_behind_ears', 'red_eyes', 'hair_ribbon', 'headphones', 'bangs', 'hair_over_shoulder'],
-    'Esdeath_agk': ['long_hair', 'light_blue_hair', 'straight_hair', 'blue_eyes', 'hat', 'ahoge'],
-    'kurome_agk': ['short_hair', 'black_hair', 'straight_hair', 'bangs', 'hair_between_eyes', 'black_eyes'],
-    'leone_agk': ['blonde_hair', 'yellow_eyes', 'messy_hair', 'medium_hair', 'bangs', 'ahoge', 'hair_over_shoulders','side_locks'],
-    'mine_agk': ['pink_hair', 'twin_tails', 'long_hair', 'hair_ribbon', 'hair_between_eyes', 'bangs', 'pink_eyes'],
-    'seryu_agk': ['brown_hair', 'long_hair', 'ponytail', 'bangs', 'hair_behind_ears', 'brown_eyes', 'hair_stick'],
-    'sheele_agk': ['purple_hair', 'long_hair', 'glasses', 'bangs', 'hair_between_eyes', 'hair_ornament', 'purple_eyes', 'straight_hair', 'side_bangs']   
+  'saku_dn': ['green_eyes', 'glasses', 'brown_hair', 'long_hair', 'asymmetrical_bangs', 'hair_behind_ears'],
+  'yuri_dn': ['purple_eyes', 'purple_hair', 'long_hair', 'parted_bangs', 'straight_hair'],
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -252,7 +232,7 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\__AKAME GA KILL'
+root_folder = r'T:\_SELECT\__DEKIRU NEKO'
 destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
