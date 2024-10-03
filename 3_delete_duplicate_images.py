@@ -72,6 +72,6 @@ def process_all_subdirectories(root_directory):
             print("Aucun doublon trouvé dans ce répertoire.")
 
 # Usage
-output_directory = r"F:\1_TO_EXTRACT\TERMINATOR ZERO"
+output_directory = r"T:\_SELECT\VTUBER SHINON DANYUKI"
 process_all_subdirectories(output_directory)
 print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

@@ -8,10 +8,13 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
 # Configuration centrale des paramètres
-device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
+device_type = 'cpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
+batch_size_gpu = 8  # Taille de lot pour le GPU
 num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
-batch_size_gpu = 16  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
+
+# Répertoire de base contenant les sous-dossiers
+base_folder = r"T:\_SELECT\-HOKKAIDO GALS"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
@@ -32,9 +35,6 @@ else:
 # Charger le modèle YOLOv8 animeface pré-entraîné
 model_path = Path('models') / 'yolov8x6_animeface.pt'
 model = YOLO(str(model_path))  # Charger le modèle
-
-# Répertoire de base contenant les sous-dossiers
-base_folder = r"T:\_SELECT\__DEKIRU NEKO"
 
 # Taille de l'image pour réduire l'utilisation de la VRAM
 target_size = (640, 640)  # Redimensionner les images à 640x640
