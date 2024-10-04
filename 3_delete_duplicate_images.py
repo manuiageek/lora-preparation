@@ -72,6 +72,6 @@ def process_all_subdirectories(root_directory):
             print("Aucun doublon trouvé dans ce répertoire.")
 
 # Usage
-output_directory = r"T:\_SELECT\VTUBER SHINON DANYUKI"
+output_directory = r"F:\2_TO_EPURATE_3-4\DRAGON RAJA"
 process_all_subdirectories(output_directory)
 print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

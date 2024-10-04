@@ -2,7 +2,7 @@ import os
 
 
 # Chemin du répertoire où se trouvent les fichiers
-directory      = r"F:\1_TO_EXTRACT_1-2\DUMBBELL NAN KILO MOTERU"
+directory      = r"F:\1_TO_EXTRACT_1-2\DRAGON RAJA"
 
 # Obtenir la liste des fichiers .mkv dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith('.mkv')])

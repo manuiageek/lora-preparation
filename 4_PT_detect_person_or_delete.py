@@ -8,13 +8,13 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
 # Configuration centrale des paramètres
-device_type = 'cpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
-batch_size_gpu = 8  # Taille de lot pour le GPU
+device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
+batch_size_gpu = 4  # Taille de lot pour le GPU
 num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"T:\_SELECT\-HOKKAIDO GALS"
+base_folder = r"F:\2_TO_EPURATE_3-4\-GRANCREST SENKI"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
