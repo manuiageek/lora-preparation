@@ -14,7 +14,7 @@ import psutil
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
 BATCH_SIZE = 8  # Taille du batch pour le traitement des images
 NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
-vram_limit = 2500  # Limite de mémoire GPU en méga-octets
+vram_limit = 4000  # Limite de mémoire GPU en méga-octets
 
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
 if device_type == 'gpu':
@@ -46,12 +46,12 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'ami_dna2': ['brown_hair', 'short_hair', 'brown_eyes', 'parted_bangs', 'blunt_bangs'],
-    'karin_dna2': ['light_blue_hair', 'green_eyes', 'braid', 'bangs', 'hair_between_eyes', 'ahoge', 'short_hair'],
-    'kotomi_dna2': ['black_hair', 'short_hair', 'blunt_bangs', 'grey_eyes'],    
-    'lulara_dna2': ['orange_hair', 'short_hair', 'wavy_hair', 'blue_eyes', 'hair_between_eyes', 'bangs'],        
-    'tomoko_dna2': ['brown_hair', 'long_hair', 'wavy_hair', 'hair_between_eyes', 'bangs', 'brown_eyes']
-} 
+    'ami_dna2': ['bangs', 'brown_eyes', 'brown_hair', 'short_hair'],
+    'karin_dna2': ['blue_hair', 'braid', 'green_eyes', 'short_hair_with_long_locks', 'sidelocks'],
+    'kotomi_dna2': ['bangs', 'black_hair', 'blunt_bangs', 'bob_cut', 'short_hair'],
+    'lulara_dna2': ['bangs', 'blue_eyes', 'orange_hair', 'parted_bangs', 'short_hair'],
+    'tomoko_dna2': ['brown_eyes', 'brown_hair', 'long_hair', 'wavy_hair'],
+}
 
 # Fonction pour charger une image et la redimensionner (CPU)
 def load_and_resize_image(image_path, width, height):
@@ -111,9 +111,12 @@ def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gp
 # Fonction pour nettoyer les fichiers précédemment classés
 def clean_previous_classifications(destination_folder, subfolder_name):
     folders_to_clean = [os.path.join(destination_folder, character) for character in characters] + \
-                       [os.path.join(destination_folder, 'zboy'), os.path.join(destination_folder, 'zgirl'),
-                        os.path.join(destination_folder, 'zmisc'), os.path.join(destination_folder, 'z_daymisc'),
-                        os.path.join(destination_folder, 'z_nightmisc')]
+                       [os.path.join(destination_folder, 'zboy'),
+                        os.path.join(destination_folder, 'z_daymisc'),
+                        os.path.join(destination_folder, 'z_nightmisc'),
+                        os.path.join(destination_folder, 'z_daymisc_girl'),
+                        os.path.join(destination_folder, 'z_nightmisc_girl'),
+                        os.path.join(destination_folder, 'z_background')]
 
     for folder in folders_to_clean:
         if os.path.exists(folder):
@@ -157,10 +160,16 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
     if not os.path.exists(zboy_folder):
         os.makedirs(zboy_folder)
 
-    zgirl_folder = os.path.join(destination_folder, 'zgirl')
-    if not os.path.exists(zgirl_folder):
-        os.makedirs(zgirl_folder)
+    # Dossiers pour les images de filles sans personnage spécifique
+    z_daymisc_girl_folder = os.path.join(destination_folder, 'z_daymisc_girl')
+    if not os.path.exists(z_daymisc_girl_folder):
+        os.makedirs(z_daymisc_girl_folder)
 
+    z_nightmisc_girl_folder = os.path.join(destination_folder, 'z_nightmisc_girl')
+    if not os.path.exists(z_nightmisc_girl_folder):
+        os.makedirs(z_nightmisc_girl_folder)
+
+    # Dossiers pour les images sans filles ni garçons mais avec personnes
     z_daymisc_folder = os.path.join(destination_folder, 'z_daymisc')
     if not os.path.exists(z_daymisc_folder):
         os.makedirs(z_daymisc_folder)
@@ -168,6 +177,16 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
     z_nightmisc_folder = os.path.join(destination_folder, 'z_nightmisc')
     if not os.path.exists(z_nightmisc_folder):
         os.makedirs(z_nightmisc_folder)
+
+    # Dossier pour les images sans aucune personne
+    z_background_folder = os.path.join(destination_folder, 'z_background')
+    if not os.path.exists(z_background_folder):
+        os.makedirs(z_background_folder)
+
+    # Définir les ensembles de tags pour détecter les filles, les garçons et les personnes
+    girl_tags = {'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls','tomboy','demon_girl','fox_girl','fish_girl','arthropod_girl','lion_girl','tiger_girl','lamia_girl','old_woman','policewoman','woman'}
+    boy_tags = {'1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys','fat_man','old_man','salaryman','ugly_man','man'}
+    person_tags = girl_tags.union(boy_tags).union({'solo', 'multiple_persons', 'group'})
 
     # Traiter les images par lots
     num_images = len(image_paths)
@@ -179,15 +198,16 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
 
         # Traiter les résultats du batch
         for image_path, predicted_tags_set, result_tags in batch_results:
-            has_boy = any('boy' in tag for tag in predicted_tags_set)
-            has_girl = any('girl' in tag for tag in predicted_tags_set)
+            # Déterminer si l'image contient une fille ou un garçon en vérifiant les tags
+            has_girl = any(tag in predicted_tags_set for tag in girl_tags)
+            has_boy = any(tag in predicted_tags_set for tag in boy_tags)
+            has_person = any(tag in predicted_tags_set for tag in person_tags)
 
-            if has_boy and not has_girl:
-                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                destination_path = os.path.join(zboy_folder, new_filename)
-                shutil.copy2(image_path, destination_path)
-                print(f"L'image '{image_path}' a été classée dans 'zboy'.")
-            else:
+            # Vous pouvez décommenter la ligne suivante pour afficher les tags prédits
+            # print(f"Tags prédits pour l'image '{image_path}': {predicted_tags_set}")
+
+            if has_girl:
+                # L'image contient une fille, procéder à la classification des personnages
                 image_characters = []
                 for character, char_tags in characters.items():
                     matching_tags = predicted_tags_set.intersection(char_tags)
@@ -197,40 +217,58 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
                         image_characters.append(character)
 
                 if image_characters:
+                    # L'image correspond à un ou plusieurs personnages
                     for character in image_characters:
                         new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                         destination_path = os.path.join(character_folders[character], new_filename)
                         shutil.copy2(image_path, destination_path)
                     print(f"L'image '{image_path}' a été classée dans : {', '.join(image_characters)}")
                 else:
-                    if has_girl:
-                        new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                        destination_path = os.path.join(zgirl_folder, new_filename)
-                        shutil.copy2(image_path, destination_path)
-                        print(f"L'image '{image_path}' a été classée dans 'zgirl'.")
+                    # L'image ne correspond à aucun personnage, déterminer si elle est de nuit ou de jour
+                    is_night = is_night_image(image_path)
+                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                    if is_night:
+                        destination_path = os.path.join(z_nightmisc_girl_folder, new_filename)
+                        print(f"L'image '{image_path}' a été classée dans 'z_nightmisc_girl'.")
                     else:
-                        # Déterminer si l'image est de nuit ou de jour
-                        is_night = is_night_image(image_path)
-                        new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                        if is_night:
-                            destination_path = os.path.join(z_nightmisc_folder, new_filename)
-                            print(f"L'image '{image_path}' a été classée dans 'z_nightmisc'.")
-                        else:
-                            destination_path = os.path.join(z_daymisc_folder, new_filename)
-                            print(f"L'image '{image_path}' a été classée dans 'z_daymisc'.")
-                        shutil.copy2(image_path, destination_path)
+                        destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
+                        print(f"L'image '{image_path}' a été classée dans 'z_daymisc_girl'.")
+                    shutil.copy2(image_path, destination_path)
+            elif has_boy:
+                # L'image contient un garçon (et pas de fille), la classer dans 'zboy'
+                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                destination_path = os.path.join(zboy_folder, new_filename)
+                shutil.copy2(image_path, destination_path)
+                print(f"L'image '{image_path}' a été classée dans 'zboy'.")
+            elif has_person:
+                # L'image contient une personne (ni garçon, ni fille spécifique), classer dans misc
+                is_night = is_night_image(image_path)
+                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                if is_night:
+                    destination_path = os.path.join(z_nightmisc_folder, new_filename)
+                    print(f"L'image '{image_path}' a été classée dans 'z_nightmisc'.")
+                else:
+                    destination_path = os.path.join(z_daymisc_folder, new_filename)
+                    print(f"L'image '{image_path}' a été classée dans 'z_daymisc'.")
+                shutil.copy2(image_path, destination_path)
+            else:
+                # L'image ne contient aucune personne, la classer dans 'z_background'
+                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                destination_path = os.path.join(z_background_folder, new_filename)
+                shutil.copy2(image_path, destination_path)
+                print(f"L'image '{image_path}' a été classée dans 'z_background'.")
 
     print(f"Le dossier '{subfolder_name}' a été traité.")
 
 # Fonction principale pour traiter tous les sous-dossiers
-def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.5, batch_size=BATCH_SIZE, device_type='gpu'):
+def process_all_subfolders(root_folder, destination_folder, threshold=0.5, match_threshold=0.3, batch_size=BATCH_SIZE, device_type='gpu'):
     subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
     if not subfolders:
         print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}.")
         return
 
     for subfolder in subfolders:
-        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'zgirl', 'z_daymisc', 'z_nightmisc']:
+        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'z_daymisc', 'z_nightmisc', 'z_daymisc_girl', 'z_nightmisc_girl', 'z_background']:
             continue
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
@@ -240,5 +278,5 @@ destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
-    process_all_subfolders(root_folder, destination_folder, threshold=0.6, match_threshold=0.4, batch_size=BATCH_SIZE, device_type=device_type)
+    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.6, batch_size=BATCH_SIZE, device_type=device_type)
     print(f"Traitement terminé le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

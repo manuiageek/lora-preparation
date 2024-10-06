@@ -20,6 +20,15 @@ tags = dd.project.load_tags_from_project(project_path)
 # Convertir la liste des tags en un dictionnaire pour un accès plus rapide
 tags_dict = {i: tag for i, tag in enumerate(tags)}
 
+# Liste des tags à exclure
+excluded_tags = [
+    'solo', '1girl', '1boy', 'rating:safe', 'rating:questionable', 'rating:explicit',
+    'armor', 'shoulder_armor', 'open_mouth','closed_mouth', 'smile', ':d', 'parted_lips',
+    'headwear', 'helmet', 'hat', 'shirt',
+    'looking_at_viewer', 'upper_body', 'portrait', 'blurry_background','gradient_background','depth_of_field',
+    'simple_background', 'blurry','border',
+]
+
 # Fonction pour prétraiter l'image
 def load_image_for_deepdanbooru(image_path, width, height):
     image = Image.open(image_path).convert('RGB')
@@ -38,7 +47,10 @@ def predict_image_tags(image_path, threshold=0.5):
     # Obtenir les tags prédits avec des probabilités supérieures au seuil
     result_tags = [tags_dict[i] for i, score in enumerate(predictions) if score >= threshold]
 
-    return result_tags
+    # Filtrer les tags qui ne commencent pas par "rating:" et qui ne sont pas dans la liste des tags exclus
+    filtered_tags = [tag for tag in result_tags if tag not in excluded_tags]
+
+    return filtered_tags
 
 # Fonction pour traiter toutes les images dans un dossier
 def process_images_in_folder(folder_path, threshold=0.5):
@@ -55,16 +67,13 @@ def process_images_in_folder(folder_path, threshold=0.5):
 
     # Traiter chaque image et stocker les résultats
     for idx, image_path in enumerate(image_paths):
-        image_name = os.path.basename(image_path)
+        # Retirer l'extension de l'image
+        image_name = os.path.splitext(os.path.basename(image_path))[0]
         tags = predict_image_tags(image_path, threshold=threshold)
-        tags_str = ", ".join(tags)
+        tags_str = ", ".join([f"'{tag}'" for tag in tags])  # Ajouter des quotes autour de chaque tag
 
-        # Affichage avec une belle séparation pour chaque image
-        if idx > 0:
-            print(f"\n{'='*20} Image : {image_name} {'='*20}")
-        else:
-            print(f"{'='*20} Image : {image_name} {'='*20}")
-        print(f"'{image_name}':[{tags_str}],")              
+        # Affichage des tags pour chaque image
+        print(f"'{image_name}': [{tags_str}],")
 
 # Chemin vers le dossier contenant les images
 folder_path = 'images'  # Remplacez par le chemin vers votre dossier d'images
