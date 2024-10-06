@@ -23,7 +23,7 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 # Fonction pour prétraiter l'image
 def load_image_for_deepdanbooru(image_path, width, height):
     image = Image.open(image_path).convert('RGB')
-    image = image.resize((width, height), Image.ANTIALIAS)
+    image = image.resize((width, height), Image.LANCZOS)
     image = np.array(image, dtype=np.float32) / 255.0
     return image.reshape((1, height, width, 3))
 
@@ -64,7 +64,7 @@ def process_images_in_folder(folder_path, threshold=0.5):
             print(f"\n{'='*20} Image : {image_name} {'='*20}")
         else:
             print(f"{'='*20} Image : {image_name} {'='*20}")
-        print(f"Tags prédits : {tags_str}")
+        print(f"'{image_name}':[{tags_str}],")              
 
 # Chemin vers le dossier contenant les images
 folder_path = 'images'  # Remplacez par le chemin vers votre dossier d'images

@@ -12,9 +12,9 @@ import psutil
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-BATCH_SIZE = 2  # Taille du batch pour le traitement des images
+BATCH_SIZE = 8  # Taille du batch pour le traitement des images
 NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
-vram_limit = 2000  # Limite de mémoire GPU en méga-octets
+vram_limit = 2500  # Limite de mémoire GPU en méga-octets
 
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
 if device_type == 'gpu':
@@ -46,12 +46,11 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'akemi_dnm': ['bangs', 'black_hair', 'blunt_bangs', 'long_hair', 'blue_eyes'],
-    'ayaka_dnm': ['brown_hair', 'bun', 'dark_skin', 'hair_behind_ear', 'hair_ornament', 'single_hair_bun', 'yellow_eyes'],
-    'crystal_dnm': ['blue_eyes', 'long_hair', 'silver_hair'],
-    'gina_dnm': ['blue_eyes', 'bob_cut', 'blunt_bangs', 'short_hair', 'white_hair'],
-    'hibiki_dnm': ['blonde_hair', 'green_eyes', 'long_hair', 'twintails', 'bangs'],
-    'satomi_dnm': ['black_hair', 'brown_eyes', 'short_hair']
+    'ami_dna2': ['brown_hair', 'short_hair', 'brown_eyes', 'parted_bangs', 'blunt_bangs'],
+    'karin_dna2': ['light_blue_hair', 'green_eyes', 'braid', 'bangs', 'hair_between_eyes', 'ahoge', 'short_hair'],
+    'kotomi_dna2': ['black_hair', 'short_hair', 'blunt_bangs', 'grey_eyes'],    
+    'lulara_dna2': ['orange_hair', 'short_hair', 'wavy_hair', 'blue_eyes', 'hair_between_eyes', 'bangs'],        
+    'tomoko_dna2': ['brown_hair', 'long_hair', 'wavy_hair', 'hair_between_eyes', 'bangs', 'brown_eyes']
 } 
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -236,7 +235,7 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.4, match
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\2_TO_EPURATE_3-4\_-DUMBBELL NAN KILO MOTERU'
+root_folder = r'T:\_SELECT\_-DNA2'
 destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers

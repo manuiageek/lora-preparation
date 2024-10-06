@@ -14,7 +14,7 @@ num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\2_TO_EPURATE_3-4\-GRANCREST SENKI"
+base_folder = r"F:\2_TO_EPURATE_3-4\-MAOUGUN SAIKYOU"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
