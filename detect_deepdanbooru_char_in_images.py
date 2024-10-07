@@ -22,10 +22,10 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Liste des tags à exclure
 excluded_tags = [
-    'solo', '1girl', '1boy', 'rating:safe', 'rating:questionable', 'rating:explicit',
+    'solo', '1girl', '1boy', 'rating:safe', 'rating:questionable', 'rating:explicit','3d',
     'armor', 'shoulder_armor', 'open_mouth','closed_mouth', 'smile', ':d', 'parted_lips',
     'headwear', 'helmet', 'hat', 'shirt',
-    'looking_at_viewer', 'upper_body', 'portrait', 'blurry_background','gradient_background','depth_of_field',
+    'looking_at_viewer', 'upper_body', 'portrait', 'blurry_background','gradient_background','depth_of_field','aiming_at_viewer','blurry_foreground',
     'simple_background', 'blurry','border',
 ]
 

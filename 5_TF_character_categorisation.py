@@ -14,7 +14,7 @@ import psutil
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
 BATCH_SIZE = 8  # Taille du batch pour le traitement des images
 NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
-vram_limit = 4000  # Limite de mémoire GPU en méga-octets
+vram_limit = 5000  # Limite de mémoire GPU en méga-octets
 
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
 if device_type == 'gpu':
@@ -46,11 +46,11 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'ami_dna2': ['bangs', 'brown_eyes', 'brown_hair', 'short_hair'],
-    'karin_dna2': ['blue_hair', 'braid', 'green_eyes', 'short_hair_with_long_locks', 'sidelocks'],
-    'kotomi_dna2': ['bangs', 'black_hair', 'blunt_bangs', 'bob_cut', 'short_hair'],
-    'lulara_dna2': ['bangs', 'blue_eyes', 'orange_hair', 'parted_bangs', 'short_hair'],
-    'tomoko_dna2': ['brown_eyes', 'brown_hair', 'long_hair', 'wavy_hair'],
+    'amelia_slayers': ['black_hair', 'blue_eyes','ahoge', 'short_hair'],
+    'lina_slayers': ['brown_hair','messy_hair','bangs','ahoge','red_eyes', 'long_hair', 'lina_inverse'],
+    'naga_slayers': ['long_hair', 'purple_hair','blue_eyes','sharp_eyes'],
+    'selena_slayers': ['green_hair','short_hair', 'messy_hair','purple_eyes','bangs'],
+    'sylphiel_slayers': ['blue_eyes', 'blunt_bangs', 'long_hair','purple_hair'],
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -273,7 +273,7 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.5, match
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\_-DNA2'
+root_folder = r'F:\2_TO_EPURATE_4-5\_-SLAYERS'
 destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
