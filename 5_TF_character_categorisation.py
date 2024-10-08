@@ -47,7 +47,7 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
     'amelia_slayers': ['black_hair', 'blue_eyes','ahoge', 'short_hair'],
-    'lina_slayers': ['brown_hair','messy_hair','bangs','ahoge','red_eyes', 'long_hair', 'lina_inverse'],
+    'lina_slayers': ['brown_hair','messy_hair','bangs','ahoge','red_eyes', 'long_hair'],
     'naga_slayers': ['long_hair', 'purple_hair','blue_eyes','sharp_eyes'],
     'selena_slayers': ['green_hair','short_hair', 'messy_hair','purple_eyes','bangs'],
     'sylphiel_slayers': ['blue_eyes', 'blunt_bangs', 'long_hair','purple_hair'],
@@ -278,5 +278,5 @@ destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
-    process_all_subfolders(root_folder, destination_folder, threshold=0.4, match_threshold=0.6, batch_size=BATCH_SIZE, device_type=device_type)
+    process_all_subfolders(root_folder, destination_folder, threshold=0.5, match_threshold=0.5, batch_size=BATCH_SIZE, device_type=device_type)
     print(f"Traitement terminé le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
