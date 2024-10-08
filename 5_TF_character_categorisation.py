@@ -12,9 +12,9 @@ import psutil
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-BATCH_SIZE = 8  # Taille du batch pour le traitement des images
+BATCH_SIZE = 4  # Taille du batch pour le traitement des images
 NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
-vram_limit = 5000  # Limite de mémoire GPU en méga-octets
+vram_limit = 4000  # Limite de mémoire GPU en méga-octets
 
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
 if device_type == 'gpu':
@@ -46,11 +46,11 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'amelia_slayers': ['black_hair', 'blue_eyes','ahoge', 'short_hair'],
-    'lina_slayers': ['brown_hair','messy_hair','bangs','ahoge','red_eyes', 'long_hair'],
-    'naga_slayers': ['long_hair', 'purple_hair','blue_eyes','sharp_eyes'],
-    'selena_slayers': ['green_hair','short_hair', 'messy_hair','purple_eyes','bangs'],
-    'sylphiel_slayers': ['green_eyes', 'blunt_bangs', 'long_hair','purple_hair'],
+'amelia_slayers': ['black_hair', 'blue_eyes','ahoge', 'short_hair'],
+'lina_slayers': ['brown_hair','messy_hair','bangs','ahoge','red_eyes', 'long_hair'],
+'naga_slayers': ['long_hair', 'purple_hair','blue_eyes','sharp_eyes'],
+'selena_slayers': ['green_hair','short_hair', 'messy_hair','purple_eyes','bangs'],
+'sylphiel_slayers': ['green_eyes', 'blunt_bangs', 'long_hair','purple_hair'],
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)

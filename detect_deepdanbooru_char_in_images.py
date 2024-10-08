@@ -1,3 +1,6 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 import deepdanbooru as dd
 import numpy as np
 from PIL import Image
