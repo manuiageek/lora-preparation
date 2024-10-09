@@ -46,11 +46,11 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'amelia_slayers': ['black_hair', 'blue_eyes','ahoge', 'short_hair'],
-'lina_slayers': ['brown_hair','messy_hair','bangs','ahoge','red_eyes', 'long_hair'],
-'naga_slayers': ['long_hair', 'purple_hair','blue_eyes','sharp_eyes'],
-'selena_slayers': ['green_hair','short_hair', 'messy_hair','purple_eyes','bangs'],
-'sylphiel_slayers': ['green_eyes', 'blunt_bangs', 'long_hair','purple_hair'],
+    'amelia_slayers': ['black_hair', 'blue_eyes', 'ahoge', 'short_hair'],
+    'lina_slayers': ['brown_hair', 'messy_hair', 'bangs', 'ahoge', 'red_eyes', 'long_hair'],
+    'naga_slayers': ['long_hair', 'purple_hair', 'blue_eyes', 'sharp_eyes'],
+    'selena_slayers': ['green_hair', 'short_hair', 'messy_hair', 'purple_eyes', 'bangs'],
+    'sylphiel_slayers': ['green_eyes', 'blunt_bangs', 'long_hair', 'purple_hair'],
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -62,11 +62,6 @@ def load_and_resize_image(image_path, width, height):
 
 # Fonction pour détecter si une image est de nuit en fonction de sa luminosité
 def is_night_image(image_path, dark_threshold=50, dark_pixel_ratio=0.6):
-    """
-    Détecte si une image est prise de nuit en fonction de sa luminosité.
-    - dark_threshold : seuil en dessous duquel un pixel est considéré comme sombre (0-255).
-    - dark_pixel_ratio : proportion de pixels sombres pour qu'une image soit considérée comme de nuit.
-    """
     image = Image.open(image_path).convert('L')  # Convertir l'image en niveaux de gris
     pixels = np.array(image)  # Convertir l'image en un tableau numpy
     num_dark_pixels = np.sum(pixels < dark_threshold)  # Compter les pixels sombres
@@ -76,11 +71,11 @@ def is_night_image(image_path, dark_threshold=50, dark_pixel_ratio=0.6):
     dark_ratio = num_dark_pixels / total_pixels
     return dark_ratio >= dark_pixel_ratio  # Retourne True si l'image est considérée comme de nuit
 
-# Fonction pour charger toutes les images d'un sous-dossier dans la RAM
-def load_all_images_from_subfolder(image_paths, width, height):
-    with ThreadPoolExecutor(max_workers=NUM_CORES) as executor:  # Utiliser le nombre de cœurs défini
+# Fonction pour charger les images d'un batch
+def load_images_batch(image_paths, width, height):
+    with ThreadPoolExecutor(max_workers=NUM_CORES) as executor:
         images = list(executor.map(lambda p: load_and_resize_image(p, width, height), image_paths))
-    return images  # Retourne une liste d'images redimensionnées
+    return images
 
 # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
 def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gpu'):
@@ -144,10 +139,6 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
         print(f"Aucune image trouvée dans le dossier {subfolder_path}.")
         return
 
-    # Charger toutes les images du sous-dossier en RAM
-    width, height = model.input_shape[2], model.input_shape[1]
-    images = load_all_images_from_subfolder(image_paths, width, height)
-
     # Créer les dossiers de destination s'ils n'existent pas
     character_folders = {}
     for character in characters:
@@ -184,16 +175,19 @@ def process_subfolder(subfolder_path, destination_folder, threshold=0.5, match_t
         os.makedirs(z_background_folder)
 
     # Définir les ensembles de tags pour détecter les filles, les garçons et les personnes
-    girl_tags = {'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls','tomboy','demon_girl','fox_girl','fish_girl','arthropod_girl','lion_girl','tiger_girl','lamia_girl','old_woman','policewoman','woman'}
-    boy_tags = {'1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys','fat_man','old_man','salaryman','ugly_man','man'}
+    girl_tags = {'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl', 'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman', 'policewoman', 'woman'}
+    boy_tags = {'1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys', 'fat_man', 'old_man', 'salaryman', 'ugly_man', 'man'}
     person_tags = girl_tags.union(boy_tags).union({'solo', 'multiple_persons', 'group'})
 
-    # Traiter les images par lots
+    # Obtenir la taille d'entrée du modèle
+    width, height = model.input_shape[2], model.input_shape[1]
+
+    # Traiter les images par lots sans charger toutes les images en mémoire
     num_images = len(image_paths)
     for start_idx in range(0, num_images, batch_size):
         end_idx = min(start_idx + batch_size, num_images)
-        batch_images = images[start_idx:end_idx]
         batch_image_paths = image_paths[start_idx:end_idx]
+        batch_images = load_images_batch(batch_image_paths, width, height)
         batch_results = predict_image_tags_batch(batch_images, batch_image_paths, threshold=threshold, device_type=device_type)
 
         # Traiter les résultats du batch
