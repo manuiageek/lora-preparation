@@ -36,6 +36,7 @@ p = psutil.Process()  # Obtenir le processus actuel
 
 if NUM_CORES == 8:
     p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])
+    # p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])
 else:
     p.cpu_affinity([8, 9, 10, 11, 12, 13, 28, 29, 30, 31, 24, 25])
 
