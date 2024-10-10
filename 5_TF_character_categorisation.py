@@ -212,11 +212,11 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
                 if has_girl:
                     destination_path = os.path.join(z_nightmisc_girl_folder, new_filename)
                     shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans 'z_nightmisc_girl'.")
+                    print(f"L'image '{image_path}' a été classée dans 'z_nightmisc_girl'")
                 else:
                     destination_path = os.path.join(z_nightmisc_folder, new_filename)
                     shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans 'z_nightmisc'.")
+                    print(f"L'image '{image_path}' a été classée dans 'z_nightmisc'")
                 continue  # L'image a été classée, on passe à l'image suivante
 
             # Ensuite, si l'image n'est pas de nuit, vérifier les personnages et les autres tags
@@ -245,34 +245,34 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
                     # Si l'image ne correspond à aucun personnage, classer jour/nuit
                     new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                     destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
-                    print(f"L'image '{image_path}' a été classée dans 'z_daymisc_girl'.")
+                    print(f"L'image '{image_path}' a été classée dans 'z_daymisc_girl'")
                     shutil.copy2(image_path, destination_path)
             elif has_boy:
                 # L'image contient un garçon (et pas de fille), la classer dans 'zboy'
                 new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                 destination_path = os.path.join(zboy_folder, new_filename)
                 shutil.copy2(image_path, destination_path)
-                print(f"L'image '{image_path}' a été classée dans 'zboy'.")
+                print(f"L'image '{image_path}' a été classée dans 'zboy'")
             elif has_person:
                 # L'image contient une personne (ni garçon, ni fille spécifique), classer dans misc
                 new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                 destination_path = os.path.join(z_daymisc_folder, new_filename)
                 shutil.copy2(image_path, destination_path)
-                print(f"L'image '{image_path}' a été classée dans 'z_daymisc'.")
+                print(f"L'image '{image_path}' a été classée dans 'z_daymisc'")
             else:
                 # L'image ne contient aucune personne, la classer dans 'z_background'
                 new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                 destination_path = os.path.join(z_background_folder, new_filename)
                 shutil.copy2(image_path, destination_path)
-                print(f"L'image '{image_path}' a été classée dans 'z_background'.")
+                print(f"L'image '{image_path}' a été classée dans 'z_background'")
 
-    print(f"Le dossier '{subfolder_name}' a été traité.")
+    print(f"Le dossier '{subfolder_name}' a été traité")
 
 # Fonction principale pour traiter tous les sous-dossiers
 def process_all_subfolders(root_folder, threshold=0.5, match_threshold=0.3, batch_size=BATCH_SIZE, device_type='gpu'):
     subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
     if not subfolders:
-        print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}.")
+        print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}")
         return
 
     for subfolder in subfolders:
