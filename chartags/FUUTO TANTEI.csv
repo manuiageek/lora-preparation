@@ -1,8 +1,5 @@
-==== images/akiko_ft_result.jpg ====
-'akiko_ft_result': ['bokeh', 'brown_eyes', 'brown_hair', 'chromatic_aberration', 'classroom', 'focused', 'hood', 'hoodie', 'jacket', 'motion_blur', 'photo_(medium)', 'photo_background', 'short_hair', 'white_shirt'],
-==== images/kanna_ft_result.jpg ====
-'kanna_ft_result': ['bangs', 'bare_shoulders', 'brown_eyes', 'brown_hair', 'holding', 'lips', 'long_hair', 'long_sleeves', 'off_shoulder', 'tears'],
-==== images/kurumi_ft_result.jpg ====
-'kurumi_ft_result': ['bare_shoulders', 'breasts', 'chinese_clothes', 'dress', 'green_eyes', 'long_hair', 'medium_breasts', 'photo_(medium)', 'red_dress', 'sleeveless', 'sleeveless_dress'],
-==== images/tokime_ft_result.jpg ====
-'tokime_ft_result': ['bare_shoulders', 'breasts', 'collarbone', 'dress', 'green_background', 'jacket', 'long_hair', 'medium_breasts', 'motion_blur', 'photo_(medium)', 'purple_eyes', 'purple_hair', 'medusa_(fate)', 'medusa_(rider)_(fate)'],
+'akiko_ft': ['brown_eyes', 'brown_hair', 'long_hair','ponytail','bangs', 'blunt_bangs'],
+'kanna_ft': ['bangs', 'bare_shoulders', 'brown_eyes', 'brown_hair',  'long_hair','hair_between_eyes','blunt_bangs', 'straight_hair'], 
+'kurumi_ft': ['long_hair','asymmetrical_bangs','bangs','blue_eyes','straight_hair'], 
+'tokime_ft': ['long_hair', 'purple_eyes', 'purple_hair','parted_bangs','bangs'],
+
