@@ -10,17 +10,23 @@ from concurrent.futures import ThreadPoolExecutor
 import psutil
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\X_-DEKIRU NEKO'
+root_folder = r'T:\_SELECT\X_-AKAME GA KILL'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'saku_dn': ['green_eyes', 'bangs', 'brown_hair', 'long_hair'],
-    'yuri_dn': ['long_hair', 'purple_eyes', 'purple_hair', 'parted_bangs'],
+'akame_agk': ['black_hair', 'long_hair', 'red_eyes', 'red_eyes',  'blunt_bangs', 'straight_hair'],
+'chelsea_agk': ['brown_hair', 'hair_between_eyes', 'long_hair', 'pink_hair','very_long_hair','red_eyes', 'ahoge', 'hair_bow', 'side_bangs'],
+'Esdeath_agk': ['long_hair', 'blue_hair', 'blue_eyes',  'straight_hair'],
+'kurome_agk': ['black_eyes', 'black_hair', 'hair_between_eyes', 'long_hair','short_hair', 'blunt_bangs'],
+'leone_agk': ['blonde_hair', 'green_eyes', 'blonde_hair', 'yellow_eyes', 'spiky_hair', 'long_hair', 'messy_hair', 'ahoge', 'blunt_bangs'],
+'mine_agk': ['hair_between_eyes','long_hair', 'purple_eyes', 'purple_hair','pink_hair', 'pink_eyes', 'twintails', 'hair_bow', 'blunt_bangs'],
+'seryu_agk': ['brown_eyes', 'brown_hair','long_hair', 'side_ponytail', 'ahoge', 'blunt_bangs'],
+'sheele_agk': ['long_hair', 'purple_eyes', 'purple_hair', 'blunt_bangs', 'hair_ornament'],
 }
 
 # Configuration centrale des paramètres
 device_type = 'cpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 8  # 8 ou 12 cœurs CPU à utiliser
+NUM_CORES = 12  # 8 ou 12 cœurs CPU à utiliser
 BATCH_SIZE = NUM_CORES  # Taille du batch pour le traitement des images
 vram_limit = 6000  # Limite de mémoire GPU en méga-octets
 
