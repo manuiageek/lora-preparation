@@ -6,7 +6,7 @@ import glob
 import tensorflow as tf
 
 # Définir une constante pour le chemin du projet DeepDanbooru
-PROJECT_PATH = r'.\models\deepdanbooru'
+PROJECT_PATH = os.path.join('.', 'models', 'deepdanbooru')
 
 # Ajuster le niveau de logging de TensorFlow pour afficher plus de messages
 tf.get_logger().setLevel('ERROR')
@@ -75,6 +75,9 @@ def process_images_in_folder(folder_path, threshold=0.5):
     for extension in image_extensions:
         found_images = glob.glob(os.path.join(folder_path, extension))
         image_paths.extend(found_images)
+
+    # Trier les images par nom dans l'ordre croissant
+    image_paths.sort()
 
     # Vérifier s'il y a des images dans le dossier
     if not image_paths:
