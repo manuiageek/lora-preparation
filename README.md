@@ -7,8 +7,6 @@ Some python scripts (written with the help of chatgpt) that I use to prepare LoR
 - 6_batch_rename_resize_convertojpg.py
 - 7_Comfyui_PREPLORA.json : workflow for comfyui
 
-NOTE : the 5_character_categorisation.py can not detect background and is faster because of tensorflow. So you could skip the 4_detect_person_or_delete.py.
-
 GPU ACCELERATION : 
 For gpu acceleration, use miniconda : https://docs.anaconda.com/miniconda/
 PYTORCH CONDA GUIDE :

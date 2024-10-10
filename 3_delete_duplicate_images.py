@@ -72,6 +72,6 @@ def process_all_subdirectories(root_directory):
             print("Aucun doublon trouvé dans ce répertoire.")
 
 # Usage
-output_directory = r"F:\1_TO_EXTRACT_1-2-3\[HorribleSubs] Sword Art Online - Alicization - War of Underworld [1080p]"
+output_directory = r"F:\1_TO_EXTRACT_1-2-3\-Sword Art Online II (01-24)"
 process_all_subdirectories(output_directory)
 print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

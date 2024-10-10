@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Spécifier le répertoire de base
-base_directory = r"F:\1_TO_EXTRACT_1-2-3\[HorribleSubs] Sword Art Online - Alicization - War of Underworld [1080p]"
+base_directory = r"F:\1_TO_EXTRACT_1-2-3\[SubsPlease] Jaku-Chara Tomozaki-kun (01-12) (1080p) [Batch]"
 
 # Obtenir la liste de tous les fichiers .mkv dans le répertoire de base
 mkv_files = [f for f in os.listdir(base_directory) if f.endswith('.mkv')]

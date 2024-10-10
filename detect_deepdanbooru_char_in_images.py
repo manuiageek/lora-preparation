@@ -1,35 +1,47 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
 import deepdanbooru as dd
 import numpy as np
 from PIL import Image
 import glob
-import os
 import tensorflow as tf
 
-# Désactiver les messages de log TensorFlow
+# Définir une constante pour le chemin du projet DeepDanbooru
+PROJECT_PATH = r'.\models\deepdanbooru'
+
+# Ajuster le niveau de logging de TensorFlow pour afficher plus de messages
 tf.get_logger().setLevel('ERROR')
+# On utilise que le CPU 
+tf.config.set_visible_devices([], 'GPU')
 
-# Spécifiez le chemin vers le projet DeepDanbooru (le dossier où vous avez extrait le modèle pré-entraîné)
-project_path = './models/deepdanbooru'
+# Charger le modèle avec un bloc try-except
+try:
+    print("Chargement du modèle...")
+    model = dd.project.load_model_from_project(PROJECT_PATH, compile_model=False)
+    print("Modèle chargé avec succès.")
+except Exception as e:
+    print(f"Erreur lors du chargement du modèle : {e}")
 
-# Charger le modèle
-model = dd.project.load_model_from_project(project_path, compile_model=False)
+# Charger les tags associés avec un bloc try-except
+try:
+    tags = dd.project.load_tags_from_project(PROJECT_PATH)
+except Exception as e:
+    print(f"Erreur lors du chargement des tags : {e}")
 
-# Charger les tags associés
-tags = dd.project.load_tags_from_project(project_path)
+# Vérifier si le modèle et les tags ont été chargés correctement avant de continuer
+if 'model' not in locals() or 'tags' not in locals():
+    print("Impossible de continuer sans le modèle ou les tags.")
+    exit()
 
 # Convertir la liste des tags en un dictionnaire pour un accès plus rapide
 tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Liste des tags à exclure
 excluded_tags = [
-    'solo', '1girl', '1boy', 'rating:safe', 'rating:questionable', 'rating:explicit','3d',
-    'armor', 'shoulder_armor', 'open_mouth','closed_mouth', 'smile', ':d', 'parted_lips',
+    'solo', '1girl', '1boy', 'rating:safe', 'rating:questionable', 'rating:explicit', '3d',
+    'armor', 'shoulder_armor', 'open_mouth', 'closed_mouth', 'smile', ':d', 'parted_lips',
     'headwear', 'helmet', 'hat', 'shirt',
-    'looking_at_viewer', 'upper_body', 'portrait', 'blurry_background','gradient_background','depth_of_field','aiming_at_viewer','blurry_foreground',
-    'simple_background', 'blurry','border',
+    'looking_at_viewer', 'upper_body', 'portrait', 'blurry_background', 'gradient_background', 'depth_of_field', 'aiming_at_viewer', 'blurry_foreground',
+    'simple_background', 'blurry', 'border',
 ]
 
 # Fonction pour prétraiter l'image
@@ -50,7 +62,7 @@ def predict_image_tags(image_path, threshold=0.5):
     # Obtenir les tags prédits avec des probabilités supérieures au seuil
     result_tags = [tags_dict[i] for i, score in enumerate(predictions) if score >= threshold]
 
-    # Filtrer les tags qui ne commencent pas par "rating:" et qui ne sont pas dans la liste des tags exclus
+    # Filtrer les tags qui ne sont pas dans la liste des tags exclus
     filtered_tags = [tag for tag in result_tags if tag not in excluded_tags]
 
     return filtered_tags
@@ -61,7 +73,8 @@ def process_images_in_folder(folder_path, threshold=0.5):
     image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp')
     image_paths = []
     for extension in image_extensions:
-        image_paths.extend(glob.glob(os.path.join(folder_path, extension)))
+        found_images = glob.glob(os.path.join(folder_path, extension))
+        image_paths.extend(found_images)
 
     # Vérifier s'il y a des images dans le dossier
     if not image_paths:
@@ -70,13 +83,17 @@ def process_images_in_folder(folder_path, threshold=0.5):
 
     # Traiter chaque image et stocker les résultats
     for idx, image_path in enumerate(image_paths):
-        # Retirer l'extension de l'image
-        image_name = os.path.splitext(os.path.basename(image_path))[0]
-        tags = predict_image_tags(image_path, threshold=threshold)
-        tags_str = ", ".join([f"'{tag}'" for tag in tags])  # Ajouter des quotes autour de chaque tag
+        print(f"==== {image_path} ====")
+        try:
+            # Retirer l'extension de l'image
+            image_name = os.path.splitext(os.path.basename(image_path))[0]
+            tags = predict_image_tags(image_path, threshold=threshold)
+            tags_str = ", ".join([f"'{tag}'" for tag in tags])  # Ajouter des quotes autour de chaque tag
 
-        # Affichage des tags pour chaque image
-        print(f"'{image_name}': [{tags_str}],")
+            # Affichage des tags pour chaque image
+            print(f"'{image_name}': [{tags_str}],")
+        except Exception as e:
+            print(f"Erreur lors du traitement de l'image {image_path} : {e}")
 
 # Chemin vers le dossier contenant les images
 folder_path = 'images'  # Remplacez par le chemin vers votre dossier d'images

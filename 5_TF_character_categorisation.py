@@ -11,15 +11,18 @@ from concurrent.futures import ThreadPoolExecutor
 import psutil
 
 # Configuration centrale des paramètres
-device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-BATCH_SIZE = 4  # Taille du batch pour le traitement des images
+device_type = 'cpu'  # 'gpu' ou 'cpu' selon vos besoins
+BATCH_SIZE = 8  # Taille du batch pour le traitement des images
 NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
-vram_limit = 4000  # Limite de mémoire GPU en méga-octets
+vram_limit = 6000  # Limite de mémoire GPU en méga-octets
+
+# force que le cpu si nécessaire
+if device_type == 'cpu':
+    tf.config.set_visible_devices([], 'GPU')
 
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
-if device_type == 'gpu':
-    p = psutil.Process()  # Obtenir le processus actuel
-    p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])  # Utiliser les cœurs physiques 4-7 et leurs HT 20-23
+p = psutil.Process()  # Obtenir le processus actuel
+p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])  # Utiliser les cœurs physiques 4-7 et leurs HT 20-23
 
 # Limiter la mémoire GPU avec TensorFlow
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -46,11 +49,8 @@ tags_dict = {i: tag for i, tag in enumerate(tags)}
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-    'amelia_slayers': ['black_hair', 'blue_eyes', 'ahoge', 'short_hair'],
-    'lina_slayers': ['brown_hair', 'messy_hair', 'bangs', 'ahoge', 'red_eyes', 'long_hair'],
-    'naga_slayers': ['long_hair', 'purple_hair', 'blue_eyes', 'sharp_eyes'],
-    'selena_slayers': ['green_hair', 'short_hair', 'messy_hair', 'purple_eyes', 'bangs'],
-    'sylphiel_slayers': ['green_eyes', 'blunt_bangs', 'long_hair', 'purple_hair'],
+'saku_dn': ['glasses', 'green_eyes', 'bangs', 'brown_hair', 'hair_behind_ear', 'long_hair', 'side_bangs'],
+'yuri_dn': ['long_hair', 'purple_eyes', 'purple_hair', 'light_purple_hair',  'parted_bangs'],
 }
 
 # Fonction pour charger une image et la redimensionner (CPU)
@@ -267,7 +267,7 @@ def process_all_subfolders(root_folder, destination_folder, threshold=0.5, match
         process_subfolder(subfolder, destination_folder, threshold, match_threshold, batch_size, device_type)
 
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\2_TO_EPURATE_4-5\_-SLAYERS'
+root_folder = r'T:\_SELECT\X_-DEKIRU NEKO'
 destination_folder = root_folder
 
 # Appeler la fonction pour traiter tous les sous-dossiers
