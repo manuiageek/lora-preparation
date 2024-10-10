@@ -14,7 +14,7 @@ num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\2_TO_EPURATE_4-5\-Sword Art Online (01-25)"
+base_folder = r"F:\2_TO_EPURATE_4-5\-Sword Art Online II (01-24)"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
@@ -23,7 +23,9 @@ print(f"Utilisation du périphérique : {device}")
 # Configuration de l'affinité des cœurs CPU pour le script GPU
 if device == 'cuda':
     p = psutil.Process()  # Obtenir le processus actuel
-    p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])  # Utiliser les cœurs physiques 0-3 et leurs HT 16-19    
+    p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])
+
+
 
 # Ajuster le nombre de threads CPU pour PyTorch si on est sur CPU
 if device == 'cpu':

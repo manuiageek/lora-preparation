@@ -12,8 +12,8 @@ import psutil
 
 # Configuration centrale des paramètres
 device_type = 'cpu'  # 'gpu' ou 'cpu' selon vos besoins
-BATCH_SIZE = 8  # Taille du batch pour le traitement des images
-NUM_CORES = 8  # Nombre de cœurs CPU à utiliser
+NUM_CORES = 12  # Nombre de cœurs CPU à utiliser
+BATCH_SIZE = NUM_CORES  # Taille du batch pour le traitement des images
 vram_limit = 6000  # Limite de mémoire GPU en méga-octets
 
 # force que le cpu si nécessaire
@@ -22,7 +22,11 @@ if device_type == 'cpu':
 
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
 p = psutil.Process()  # Obtenir le processus actuel
-p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])  # Utiliser les cœurs physiques 4-7 et leurs HT 20-23
+
+if NUM_CORES == 8:
+    p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])
+else:
+    p.cpu_affinity([8, 9, 10, 11, 12, 13, 28, 29, 30, 31, 24, 25])
 
 # Limiter la mémoire GPU avec TensorFlow
 gpus = tf.config.experimental.list_physical_devices('GPU')
