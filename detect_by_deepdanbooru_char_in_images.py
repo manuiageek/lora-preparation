@@ -70,7 +70,7 @@ def predict_image_tags(image_path, threshold=0.5):
 # Fonction pour traiter toutes les images dans un dossier
 def process_images_in_folder(folder_path, threshold=0.5):
     # Obtenir la liste des fichiers d'images dans le dossier
-    image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp')
+    image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.webp')
     image_paths = []
     for extension in image_extensions:
         found_images = glob.glob(os.path.join(folder_path, extension))

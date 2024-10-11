@@ -4,6 +4,8 @@ import imagehash
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
+output_directory = r"F:\1_TO_EXTRACT_1-2-3\[Anime Time] The Rising of the Shield Hero (Season 01+ Season 02) [BD][Dual Audio] [1080p]HEVC 10bit x265][AAC] [Batch] Tate no Yuusha no Nariagari\[Anime Time] The Rising of the Shield Hero"
+
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
 THRESHOLD = 1   # Contrôle la tolérance pour considérer deux images comme doublons
@@ -72,6 +74,5 @@ def process_all_subdirectories(root_directory):
             print("Aucun doublon trouvé dans ce répertoire.")
 
 # Usage
-output_directory = r"F:\1_TO_EXTRACT_1-2-3\-Sword Art Online II (01-24)"
 process_all_subdirectories(output_directory)
 print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

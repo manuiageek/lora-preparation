@@ -10,20 +10,20 @@ from concurrent.futures import ThreadPoolExecutor
 import psutil
 
 # Chemin vers le dossier contenant les images
-root_folder = r'/media/hleet_user/HDD-EXT/2_TO_EPURATE_4-5/_-FUUTO TANTEI'
+root_folder = r'T:\_SELECT\X_-DRAGON RAJA'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'akiko_ft': ['brown_eyes', 'brown_hair', 'long_hair','ponytail','bangs', 'blunt_bangs'],
-'kanna_ft': ['bangs', 'bare_shoulders', 'brown_eyes', 'brown_hair',  'long_hair','hair_between_eyes','blunt_bangs', 'straight_hair'], 
-'kurumi_ft': ['long_hair','asymmetrical_bangs','bangs','blue_eyes','straight_hair'], 
-'tokime_ft': ['long_hair', 'purple_eyes', 'purple_hair','parted_bangs','bangs'],
+'aki_dr': ['bangs', 'brown_eyes', 'parted_bangs','silver_hair', 'bangs', 'long_hair'],
+'chenmotong_dr': ['bangs', 'brown_eyes', 'long_hair', 'red_hair', 'very_long_hair'],
+'chenwenmen_dr': ['bangs', 'black_hair', 'blunt_bangs', 'hime_cut', 'long_hair'],
+'rin_dr': ['blonde_hair', 'bangs','blue_eyes', 'long_hair'],
 }
 
 # Configuration centrale des paramètres
 device_type = 'cpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 8  # 8 ou 12 cœurs CPU à utiliser
-BATCH_SIZE = NUM_CORES  # Taille du batch pour le traitement des images
+NUM_CORES = 12  # 8 ou 12 cœurs CPU à utiliser
+BATCH_SIZE = 12  # NUM_CORES Taille du batch pour le traitement des images
 vram_limit = 6000  # Limite de mémoire GPU en méga-octets
 
 # Force le CPU si nécessaire
@@ -33,11 +33,11 @@ if device_type == 'cpu':
 # Définir l'affinité des cœurs CPU pour le script TensorFlow
 p = psutil.Process()  # Obtenir le processus actuel
 
-# if NUM_CORES == 8:
-    # p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])
+if NUM_CORES == 8:
+    p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])
     # p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])
-# else:
-#    p.cpu_affinity([8, 9, 10, 11, 12, 13, 28, 29, 30, 31, 24, 25])
+else:
+    p.cpu_affinity([8, 9, 10, 11, 12, 13, 28, 29, 30, 31, 24, 25])
 
 # Limiter la mémoire GPU avec TensorFlow
 gpus = tf.config.experimental.list_physical_devices('GPU')
