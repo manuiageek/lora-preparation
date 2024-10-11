@@ -4,7 +4,7 @@ import imagehash
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
-output_directory = r"F:\1_TO_EXTRACT_1-2-3\[Anime Time] The Rising of the Shield Hero (Season 01+ Season 02) [BD][Dual Audio] [1080p]HEVC 10bit x265][AAC] [Batch] Tate no Yuusha no Nariagari\[Anime Time] The Rising of the Shield Hero"
+output_directory = r"T:\_SELECT\TATE NO YUUSHA\Season 3"
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
