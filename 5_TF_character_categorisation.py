@@ -21,8 +21,8 @@ characters = {
 }
 
 # Configuration centrale des paramètres
-device_type = 'cpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 12  # 8 ou 12 cœurs CPU à utiliser
+device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
+NUM_CORES = 8  # 8 ou 12 cœurs CPU à utiliser
 BATCH_SIZE = 12  # NUM_CORES Taille du batch pour le traitement des images
 vram_limit = 6000  # Limite de mémoire GPU en méga-octets
 

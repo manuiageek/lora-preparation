@@ -4,7 +4,7 @@ import subprocess
 
 
 # Spécifier le répertoire de base
-base_directory = r"F:\1_TO_EXTRACT_1-2-3\[Anime Time] The Rising of the Shield Hero (Season 01+ Season 02) [BD][Dual Audio] [1080p]HEVC 10bit x265][AAC] [Batch] Tate no Yuusha no Nariagari\[Anime Time] The Rising of the Shield Hero"
+base_directory = r"T:\_SELECT\TATE NO YUUSHA\Season 3"
 
 # Obtenir la liste de tous les fichiers .mkv dans le répertoire de base
 mkv_files = [f for f in os.listdir(base_directory) if f.endswith('.mkv')]
