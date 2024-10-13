@@ -1,12 +1,10 @@
 import deepdanbooru as dd
 import numpy as np
-from PIL import Image
 import os
 import glob
 import shutil
 from datetime import datetime
 import tensorflow as tf
-from concurrent.futures import ThreadPoolExecutor
 import psutil
 
 # Chemin vers le dossier contenant les images
@@ -14,18 +12,18 @@ root_folder = r'T:\_SELECT\X_-DUMBBELL NAN KILO MOTERU'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'akemi_dnm': ['bangs', 'black_hair', 'blunt_bangs', 'long_hair','aqua_eyes'],
-'ayaka_dnm': ['blue_sky', 'blur_censor', 'bokeh', 'brown_hair', 'hair_bun', 'hair_ornament','bun', 'asymmetrical_bangs', 'tan_skin', 'purple_eyes'],     
-'crystal_dnm': ['blue_eyes', 'blur_censor', 'long_hair','white_hair'],
-'gina_dnm': ['bangs', 'black_serafuku', 'blue_eyes', 'blunt_bangs','short_hair','white_hair', 'bob_cut'], 
-'hibiki_dnm': ['bangs', 'black_tank_top', 'blonde_hair', 'green_eyes', 'gyaru', 'long_hair', 'twintails'], 
-'satomi_dnm': ['brown_eyes','short_hair', 'black_hair', 'bob_cut'],
+    'akemi_dnm': ['bangs', 'black_hair', 'blunt_bangs', 'long_hair', 'aqua_eyes'],
+    'ayaka_dnm': ['blue_sky', 'blur_censor', 'bokeh', 'brown_hair', 'hair_bun', 'hair_ornament', 'bun', 'asymmetrical_bangs', 'tan_skin', 'purple_eyes'],
+    'crystal_dnm': ['blue_eyes', 'blur_censor', 'long_hair', 'white_hair'],
+    'gina_dnm': ['bangs', 'black_serafuku', 'blue_eyes', 'blunt_bangs', 'short_hair', 'white_hair', 'bob_cut'],
+    'hibiki_dnm': ['bangs', 'black_tank_top', 'blonde_hair', 'green_eyes', 'gyaru', 'long_hair', 'twintails'],
+    'satomi_dnm': ['brown_eyes', 'short_hair', 'black_hair', 'bob_cut'],
 }
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
 NUM_CORES = 24  # 8, 24 ou 32 cœurs CPU à utiliser
-BATCH_SIZE = 16  # Taille du batch pour le traitement des images
+BATCH_SIZE = 128  # Taille du batch pour le traitement des images
 MAX_MEMORY_BYTES = 10 * 1024 ** 3  # Limite de RAM allouée en bytes (10 Goctets)
 
 # Force le CPU si nécessaire
@@ -63,34 +61,18 @@ tags = dd.project.load_tags_from_project(project_path)
 # Convertir la liste des tags en un dictionnaire pour un accès plus rapide
 tags_dict = {i: tag for i, tag in enumerate(tags)}
 
-# Fonction pour charger une image et la redimensionner (CPU)
-def load_and_resize_image(image_path, width, height):
-    image = Image.open(image_path).convert('RGB')
-    image = image.resize((width, height), Image.LANCZOS)
-    image = np.array(image, dtype=np.float16) / 255.0  # Utiliser float16 pour la précision mixte
-    return image
-
 # Fonction pour détecter si une image est de nuit en fonction de sa luminosité
-def is_night_image(image_path, dark_threshold=50, dark_pixel_ratio=0.6):
-    image = Image.open(image_path).convert('L')  # Convertir l'image en niveaux de gris
-    pixels = np.array(image)  # Convertir l'image en un tableau numpy
-    num_dark_pixels = np.sum(pixels < dark_threshold)  # Compter les pixels sombres
-    total_pixels = pixels.size  # Nombre total de pixels
-
-    # Calculer la proportion de pixels sombres
+def is_night_image_from_array(image_array, dark_threshold=0.2, dark_pixel_ratio=0.6):
+    # image_array est un tableau numpy de forme (hauteur, largeur, 3), valeurs entre 0 et 1
+    image_gray = np.mean(image_array, axis=2)
+    num_dark_pixels = np.sum(image_gray < dark_threshold)
+    total_pixels = image_gray.size
     dark_ratio = num_dark_pixels / total_pixels
     return dark_ratio >= dark_pixel_ratio  # Retourne True si l'image est considérée comme de nuit
 
-# Fonction pour charger les images d'un batch
-def load_images_batch(image_paths, width, height):
-    with ThreadPoolExecutor(max_workers=NUM_CORES) as executor:
-        images = list(executor.map(lambda p: load_and_resize_image(p, width, height), image_paths))
-    return images
-
 # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
 def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gpu'):
-    images = np.stack(images, axis=0)  # Convertir en tableau numpy pour l'inférence
-
+    # images est un tenseur de forme (batch_size, hauteur, largeur, 3)
     device = '/GPU:0' if device_type == 'gpu' else '/CPU:0'
     try:
         # Essayer d'effectuer la prédiction sur le périphérique sélectionné
@@ -188,8 +170,11 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
         os.makedirs(z_background_folder)
 
     # Définir les ensembles de tags pour détecter les filles, les garçons et les personnes
-    girl_tags = {'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl', 'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman', 'policewoman', 'woman'}
-    boy_tags = {'1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys', 'fat_man', 'old_man', 'salaryman', 'ugly_man', 'man'}
+    girl_tags = {'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl',
+                 'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman',
+                 'policewoman', 'woman'}
+    boy_tags = {'1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys', 'fat_man', 'old_man',
+                'salaryman', 'ugly_man', 'man'}
     person_tags = girl_tags.union(boy_tags).union({'solo', 'multiple_persons', 'group'})
 
     # Obtenir la taille d'entrée du modèle
@@ -214,33 +199,46 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
 
         print(f"\nChargement du lot {chunk_idx + 1}/{total_chunks}, images {start_idx + 1} à {end_idx}")
 
-        # Charger les images du lot en mémoire
-        images_cache = {}
-        with ThreadPoolExecutor(max_workers=NUM_CORES) as executor:
-            loaded_images = list(executor.map(lambda p: (p, load_and_resize_image(p, width, height)), chunk_image_paths))
+        # Créer un Dataset à partir des chemins d'images
+        dataset = tf.data.Dataset.from_tensor_slices(chunk_image_paths)
 
-        # Trier le cache des images dans l'ordre croissant
-        loaded_images.sort(key=lambda x: x[0])
+        # Fonction pour charger et prétraiter une image
+        def load_and_preprocess_image_with_path(image_path):
+            image = tf.io.read_file(image_path)
+            image = tf.io.decode_image(image, channels=3, expand_animations=False)
+            image.set_shape([None, None, 3])  # Définir explicitement la forme
+            image = tf.image.convert_image_dtype(image, tf.float32)
+            image = tf.image.resize(image, [height, width])
+            return image_path, image
 
-        # Stocker les images dans le cache
-        for img_path, img_array in loaded_images:
-            images_cache[img_path] = img_array
+        # Appliquer la fonction de chargement et de prétraitement
+        dataset = dataset.map(load_and_preprocess_image_with_path, num_parallel_calls=tf.data.AUTOTUNE)
+
+        # Regrouper en batches
+        dataset = dataset.batch(batch_size)
+
+        # Précharger les données
+        dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
 
         # Traiter les images par lots
-        num_images_in_chunk = len(chunk_image_paths)
-        for batch_start_idx in range(0, num_images_in_chunk, batch_size):
-            batch_end_idx = min(batch_start_idx + batch_size, num_images_in_chunk)
-            batch_image_paths = chunk_image_paths[batch_start_idx:batch_end_idx]
-            batch_images = [images_cache[p] for p in batch_image_paths]
-            batch_results = predict_image_tags_batch(batch_images, batch_image_paths, threshold=threshold, device_type=device_type)
+        for batch in dataset:
+            image_paths_batch, images_batch = batch
+            images_batch = tf.cast(images_batch, tf.float32)
+            image_paths_batch = image_paths_batch.numpy().astype(str)
+
+            # Effectuer les prédictions
+            batch_results = predict_image_tags_batch(images_batch, image_paths_batch, threshold=threshold, device_type=device_type)
 
             # Traiter les résultats du batch
-            for image_path, predicted_tags_set, result_tags in batch_results:
+            for idx, (image_path, predicted_tags_set, result_tags) in enumerate(batch_results):
                 # Afficher l'image en cours de traitement
                 print(f"Traitement de l'image : {image_path}")
 
-                # D'abord, vérifier si l'image est de nuit
-                is_night = is_night_image(image_path)
+                # Récupérer l'image correspondante
+                image = images_batch[idx].numpy()
+
+                # Vérifier si l'image est de nuit
+                is_night = is_night_image_from_array(image)
 
                 # Si l'image est de nuit
                 if is_night:
@@ -304,9 +302,7 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
                     shutil.copy2(image_path, destination_path)
                     print(f"L'image '{image_path}' a été classée dans 'z_background'")
 
-        # Libérer la mémoire du cache
-        images_cache.clear()
-        print(f"Lot {chunk_idx + 1}/{total_chunks} traité et mémoire libérée.")
+        print(f"Lot {chunk_idx + 1}/{total_chunks} traité.")
 
     print(f"Le dossier '{subfolder_name}' a été traité")
 
@@ -318,7 +314,9 @@ def process_all_subfolders(root_folder, threshold=0.5, match_threshold=0.5, batc
         return
 
     for subfolder in subfolders:
-        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'z_daymisc', 'z_nightmisc', 'z_daymisc_girl', 'z_nightmisc_girl', 'z_background']:
+        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'z_daymisc', 'z_nightmisc',
+                                                                     'z_daymisc_girl', 'z_nightmisc_girl',
+                                                                     'z_background']:
             continue
         process_subfolder(subfolder, root_folder, threshold, match_threshold, batch_size, device_type)
 
