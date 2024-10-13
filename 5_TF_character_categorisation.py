@@ -18,12 +18,13 @@ characters = {
 'aki_dr': ['bangs', 'brown_eyes', 'parted_bangs','silver_hair', 'bangs', 'long_hair'],
 'chenmotong_dr': ['bangs', 'brown_eyes', 'long_hair', 'red_hair', 'very_long_hair'],
 'chenwenmen_dr': ['bangs', 'black_hair', 'blunt_bangs', 'hime_cut', 'long_hair'],
+'norma_dr':['aqua_hair', 'bangs','blunt_bangs', 'blue_eyes','long_hair'],
 'rin_dr': ['blonde_hair', 'bangs','blue_eyes', 'long_hair'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
-THRESHOLD = 0.5
-MATCH_THRESHOLD = 0.7
+THRESHOLD = 0.35
+MATCH_THRESHOLD = 0.65
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins

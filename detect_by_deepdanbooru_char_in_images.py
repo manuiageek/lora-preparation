@@ -102,4 +102,4 @@ def process_images_in_folder(folder_path, threshold=0.5):
 folder_path = 'images'  # Remplacez par le chemin vers votre dossier d'images
 
 # Appeler la fonction pour traiter les images du dossier
-process_images_in_folder(folder_path, threshold=0.5)
+process_images_in_folder(folder_path, threshold=0.4)
