@@ -10,18 +10,23 @@ from concurrent.futures import ThreadPoolExecutor
 import psutil
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\X_-CHRONO CRUSADE'
+root_folder = r'T:\_SELECT\X_-DUMBBELL NAN KILO MOTERU'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'rosette_cc': ['blue_eyes', 'long_hair', 'blonde_hair', 'blue_eyes', 'long_hair', 'bangs', 'ahoge'],
-'satella_cc': ['ahoge', 'bangs', 'brown_eyes',  'long_hair','silver_hair', 'red_eyes', 'bangs'],
+'akemi_dnm': ['bangs', 'black_hair', 'blunt_bangs', 'long_hair','aqua_eyes'],
+'ayaka_dnm': ['blue_sky', 'blur_censor', 'bokeh', 'brown_hair', 'hair_bun', 'hair_ornament','bun', 'asymmetrical_bangs', 'tan_skin', 'purple_eyes'],     
+'crystal_dnm': ['blue_eyes', 'blur_censor', 'long_hair','white_hair'],
+'gina_dnm': ['bangs', 'black_serafuku', 'blue_eyes', 'blunt_bangs','short_hair','white_hair', 'bob_cut'], 
+'hibiki_dnm': ['bangs', 'black_tank_top', 'blonde_hair', 'green_eyes', 'gyaru', 'long_hair', 'twintails'], 
+'satomi_dnm': ['brown_eyes','short_hair', 'black_hair', 'bob_cut'],
 }
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 32  # 8, 24 ou 32 cœurs CPU à utiliser
-BATCH_SIZE = 128  # Taille du batch pour le traitement des images
+NUM_CORES = 24  # 8, 24 ou 32 cœurs CPU à utiliser
+BATCH_SIZE = 16  # Taille du batch pour le traitement des images
+MAX_MEMORY_BYTES = 10 * 1024 ** 3  # Limite de RAM allouée en bytes (10 Goctets)
 
 # Force le CPU si nécessaire
 if device_type == 'cpu':
@@ -35,11 +40,11 @@ if NUM_CORES == 8:
     p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])
 elif NUM_CORES == 24:
     # Pour 24 cœurs physiques + HT (12 cœurs physiques + 12 HT)
-    p.cpu_affinity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 
+    p.cpu_affinity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
                     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27])
 elif NUM_CORES == 32:
     # Pour 32 cœurs physiques + HT (16 cœurs physiques + 16 HT)
-    p.cpu_affinity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 
+    p.cpu_affinity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
                     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
 else:
     # Affinité par défaut pour tous les cœurs disponibles
@@ -144,6 +149,9 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
         print(f"Aucune image trouvée dans le dossier {subfolder_name}.")
         return
 
+    # Trier les chemins d'images dans l'ordre croissant
+    image_paths.sort()
+
     # Créer les dossiers de destination s'ils n'existent pas
     character_folders = {}
     for character in characters:
@@ -187,85 +195,123 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
     # Obtenir la taille d'entrée du modèle
     width, height = model.input_shape[2], model.input_shape[1]
 
-    # Traiter les images par lots sans charger toutes les images en mémoire
-    num_images = len(image_paths)
-    for start_idx in range(0, num_images, batch_size):
-        end_idx = min(start_idx + batch_size, num_images)
-        batch_image_paths = image_paths[start_idx:end_idx]
-        batch_images = load_images_batch(batch_image_paths, width, height)
-        batch_results = predict_image_tags_batch(batch_images, batch_image_paths, threshold=threshold, device_type=device_type)
+    # Calculer la taille approximative par image
+    per_image_size = width * height * 3 * 2  # float16, 3 canaux, 2 bytes par valeur
 
-        # Traiter les résultats du batch
-        for image_path, predicted_tags_set, result_tags in batch_results:
-            # D'abord, vérifier si l'image est de nuit
-            is_night = is_night_image(image_path)
+    # Calculer le nombre maximal d'images pouvant être chargées en mémoire
+    max_images_per_chunk = int(MAX_MEMORY_BYTES / per_image_size)
+    total_images = len(image_paths)
+    total_chunks = (total_images + max_images_per_chunk - 1) // max_images_per_chunk
 
-            # Si l'image est de nuit
-            if is_night:
-                # Vérifier si une fille est présente
-                has_girl = any(tag in predicted_tags_set for tag in girl_tags)
-                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                if has_girl:
-                    destination_path = os.path.join(z_nightmisc_girl_folder, new_filename)
-                    shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans 'z_nightmisc_girl'")
-                else:
-                    destination_path = os.path.join(z_nightmisc_folder, new_filename)
-                    shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans 'z_nightmisc'")
-                continue  # L'image a été classée, on passe à l'image suivante
+    print(f"Nombre total d'images : {total_images}")
+    print(f"Nombre maximal d'images par lot : {max_images_per_chunk}")
+    print(f"Nombre total de lots : {total_chunks}")
 
-            # Ensuite, si l'image n'est pas de nuit, vérifier les personnages et les autres tags
-            has_girl = any(tag in predicted_tags_set for tag in girl_tags)
-            has_boy = any(tag in predicted_tags_set for tag in boy_tags)
-            has_person = any(tag in predicted_tags_set for tag in person_tags)
+    for chunk_idx in range(total_chunks):
+        start_idx = chunk_idx * max_images_per_chunk
+        end_idx = min(start_idx + max_images_per_chunk, total_images)
+        chunk_image_paths = image_paths[start_idx:end_idx]
 
-            if has_girl:
-                # L'image contient une fille, procéder à la classification des personnages
-                image_characters = []
-                for character, char_tags in characters.items():
-                    matching_tags = predicted_tags_set.intersection(char_tags)
-                    match_ratio = len(matching_tags) / len(char_tags)
+        print(f"\nChargement du lot {chunk_idx + 1}/{total_chunks}, images {start_idx + 1} à {end_idx}")
 
-                    if match_ratio >= match_threshold:
-                        image_characters.append(character)
+        # Charger les images du lot en mémoire
+        images_cache = {}
+        with ThreadPoolExecutor(max_workers=NUM_CORES) as executor:
+            loaded_images = list(executor.map(lambda p: (p, load_and_resize_image(p, width, height)), chunk_image_paths))
 
-                if image_characters:
-                    # L'image correspond à un ou plusieurs personnages
-                    for character in image_characters:
-                        new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                        destination_path = os.path.join(character_folders[character], new_filename)
-                        shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans : {', '.join(image_characters)}")
-                else:
-                    # Si l'image ne correspond à aucun personnage, classer jour/nuit
+        # Trier le cache des images dans l'ordre croissant
+        loaded_images.sort(key=lambda x: x[0])
+
+        # Stocker les images dans le cache
+        for img_path, img_array in loaded_images:
+            images_cache[img_path] = img_array
+
+        # Traiter les images par lots
+        num_images_in_chunk = len(chunk_image_paths)
+        for batch_start_idx in range(0, num_images_in_chunk, batch_size):
+            batch_end_idx = min(batch_start_idx + batch_size, num_images_in_chunk)
+            batch_image_paths = chunk_image_paths[batch_start_idx:batch_end_idx]
+            batch_images = [images_cache[p] for p in batch_image_paths]
+            batch_results = predict_image_tags_batch(batch_images, batch_image_paths, threshold=threshold, device_type=device_type)
+
+            # Traiter les résultats du batch
+            for image_path, predicted_tags_set, result_tags in batch_results:
+                # Afficher l'image en cours de traitement
+                print(f"Traitement de l'image : {image_path}")
+
+                # D'abord, vérifier si l'image est de nuit
+                is_night = is_night_image(image_path)
+
+                # Si l'image est de nuit
+                if is_night:
+                    # Vérifier si une fille est présente
+                    has_girl = any(tag in predicted_tags_set for tag in girl_tags)
                     new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                    destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
-                    print(f"L'image '{image_path}' a été classée dans 'z_daymisc_girl'")
+                    if has_girl:
+                        destination_path = os.path.join(z_nightmisc_girl_folder, new_filename)
+                        shutil.copy2(image_path, destination_path)
+                        print(f"L'image '{image_path}' a été classée dans 'z_nightmisc_girl'")
+                    else:
+                        destination_path = os.path.join(z_nightmisc_folder, new_filename)
+                        shutil.copy2(image_path, destination_path)
+                        print(f"L'image '{image_path}' a été classée dans 'z_nightmisc'")
+                    continue  # L'image a été classée, on passe à l'image suivante
+
+                # Ensuite, si l'image n'est pas de nuit, vérifier les personnages et les autres tags
+                has_girl = any(tag in predicted_tags_set for tag in girl_tags)
+                has_boy = any(tag in predicted_tags_set for tag in boy_tags)
+                has_person = any(tag in predicted_tags_set for tag in person_tags)
+
+                if has_girl:
+                    # L'image contient une fille, procéder à la classification des personnages
+                    image_characters = []
+                    for character, char_tags in characters.items():
+                        matching_tags = predicted_tags_set.intersection(char_tags)
+                        match_ratio = len(matching_tags) / len(char_tags)
+
+                        if match_ratio >= match_threshold:
+                            image_characters.append(character)
+
+                    if image_characters:
+                        # L'image correspond à un ou plusieurs personnages
+                        for character in image_characters:
+                            new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                            destination_path = os.path.join(character_folders[character], new_filename)
+                            shutil.copy2(image_path, destination_path)
+                        print(f"L'image '{image_path}' a été classée dans : {', '.join(image_characters)}")
+                    else:
+                        # Si l'image ne correspond à aucun personnage, classer jour/nuit
+                        new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                        destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
+                        shutil.copy2(image_path, destination_path)
+                        print(f"L'image '{image_path}' a été classée dans 'z_daymisc_girl'")
+                elif has_boy:
+                    # L'image contient un garçon (et pas de fille), la classer dans 'zboy'
+                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                    destination_path = os.path.join(zboy_folder, new_filename)
                     shutil.copy2(image_path, destination_path)
-            elif has_boy:
-                # L'image contient un garçon (et pas de fille), la classer dans 'zboy'
-                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                destination_path = os.path.join(zboy_folder, new_filename)
-                shutil.copy2(image_path, destination_path)
-                print(f"L'image '{image_path}' a été classée dans 'zboy'")
-            elif has_person:
-                # L'image contient une personne (ni garçon, ni fille spécifique), classer dans misc
-                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                destination_path = os.path.join(z_daymisc_folder, new_filename)
-                shutil.copy2(image_path, destination_path)
-                print(f"L'image '{image_path}' a été classée dans 'z_daymisc'")
-            else:
-                # L'image ne contient aucune personne, la classer dans 'z_background'
-                new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
-                destination_path = os.path.join(z_background_folder, new_filename)
-                shutil.copy2(image_path, destination_path)
-                print(f"L'image '{image_path}' a été classée dans 'z_background'")
+                    print(f"L'image '{image_path}' a été classée dans 'zboy'")
+                elif has_person:
+                    # L'image contient une personne (ni garçon, ni fille spécifique), classer dans misc
+                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                    destination_path = os.path.join(z_daymisc_folder, new_filename)
+                    shutil.copy2(image_path, destination_path)
+                    print(f"L'image '{image_path}' a été classée dans 'z_daymisc'")
+                else:
+                    # L'image ne contient aucune personne, la classer dans 'z_background'
+                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
+                    destination_path = os.path.join(z_background_folder, new_filename)
+                    shutil.copy2(image_path, destination_path)
+                    print(f"L'image '{image_path}' a été classée dans 'z_background'")
+
+        # Libérer la mémoire du cache
+        images_cache.clear()
+        print(f"Lot {chunk_idx + 1}/{total_chunks} traité et mémoire libérée.")
 
     print(f"Le dossier '{subfolder_name}' a été traité")
 
 # Fonction principale pour traiter tous les sous-dossiers
-def process_all_subfolders(root_folder, threshold=0.5, match_threshold=0.3, batch_size=BATCH_SIZE, device_type='gpu'):
+def process_all_subfolders(root_folder, threshold=0.5, match_threshold=0.5, batch_size=BATCH_SIZE, device_type='gpu'):
     subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
     if not subfolders:
         print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}")
