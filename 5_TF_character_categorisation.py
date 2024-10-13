@@ -10,21 +10,18 @@ from concurrent.futures import ThreadPoolExecutor
 import psutil
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\X_-DRAGON RAJA'
+root_folder = r'T:\_SELECT\X_-CHRONO CRUSADE'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'aki_dr': ['bangs', 'brown_eyes', 'parted_bangs','silver_hair', 'bangs', 'long_hair'],
-'chenmotong_dr': ['bangs', 'brown_eyes', 'long_hair', 'red_hair', 'very_long_hair'],
-'chenwenmen_dr': ['bangs', 'black_hair', 'blunt_bangs', 'hime_cut', 'long_hair'],
-'rin_dr': ['blonde_hair', 'bangs','blue_eyes', 'long_hair'],
+'rosette_cc': ['blue_eyes', 'long_hair', 'blonde_hair', 'blue_eyes', 'long_hair', 'bangs', 'ahoge'],
+'satella_cc': ['ahoge', 'bangs', 'brown_eyes',  'long_hair','silver_hair', 'red_eyes', 'bangs'],
 }
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 8  # 8 ou 12 cœurs CPU à utiliser
-BATCH_SIZE = 12  # NUM_CORES Taille du batch pour le traitement des images
-vram_limit = 6000  # Limite de mémoire GPU en méga-octets
+NUM_CORES = 32  # 8, 24 ou 32 cœurs CPU à utiliser
+BATCH_SIZE = 128  # Taille du batch pour le traitement des images
 
 # Force le CPU si nécessaire
 if device_type == 'cpu':
@@ -34,21 +31,20 @@ if device_type == 'cpu':
 p = psutil.Process()  # Obtenir le processus actuel
 
 if NUM_CORES == 8:
+    # Pour 8 cœurs physiques + HT
     p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])
-    # p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])
+elif NUM_CORES == 24:
+    # Pour 24 cœurs physiques + HT (12 cœurs physiques + 12 HT)
+    p.cpu_affinity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 
+                    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27])
+elif NUM_CORES == 32:
+    # Pour 32 cœurs physiques + HT (16 cœurs physiques + 16 HT)
+    p.cpu_affinity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 
+                    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
 else:
-    p.cpu_affinity([8, 9, 10, 11, 12, 13, 28, 29, 30, 31, 24, 25])
-
-# Limiter la mémoire GPU avec TensorFlow
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus and device_type == 'gpu':
-    try:
-        tf.config.experimental.set_virtual_device_configuration(
-            gpus[0],
-            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=vram_limit)]
-        )
-    except RuntimeError as e:
-        print(e)
+    # Affinité par défaut pour tous les cœurs disponibles
+    available_cores = list(range(psutil.cpu_count()))
+    p.cpu_affinity(available_cores)
 
 # Spécifiez le chemin vers le projet DeepDanbooru
 project_path = './models/deepdanbooru'
@@ -282,5 +278,5 @@ def process_all_subfolders(root_folder, threshold=0.5, match_threshold=0.3, batc
 
 # Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
-    process_all_subfolders(root_folder, threshold=0.5, match_threshold=0.3, batch_size=BATCH_SIZE, device_type=device_type)
+    process_all_subfolders(root_folder, threshold=0.5, match_threshold=0.5, batch_size=BATCH_SIZE, device_type=device_type)
     print(f"Traitement terminé le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
