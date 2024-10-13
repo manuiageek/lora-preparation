@@ -7,6 +7,7 @@ from datetime import datetime
 import tensorflow as tf
 import psutil
 from concurrent.futures import ThreadPoolExecutor
+import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
@@ -30,6 +31,15 @@ MAX_MEMORY_BYTES = 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets
 
 # Activer la précision mixte
 mixed_precision.set_global_policy('mixed_float16')
+
+# Configurer la croissance de la mémoire GPU
+physical_devices = tf.config.list_physical_devices('GPU')
+if physical_devices:
+    try:
+        for gpu in physical_devices:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except Exception as e:
+        print(e)
 
 # Force le CPU si nécessaire
 if device_type == 'cpu':
@@ -74,23 +84,24 @@ def is_night_image_from_tensor(image_tensor, dark_threshold=0.2, dark_pixel_rati
     return dark_ratio >= dark_pixel_ratio  # Retourne un tenseur booléen
 
 # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
-def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gpu'):
+def predict_image_tags_batch(images, image_paths, threshold=0.5):
     # images est un tenseur de forme (batch_size, hauteur, largeur, 3)
     device = '/GPU:0' if device_type == 'gpu' else '/CPU:0'
     try:
-        # Essayer d'effectuer la prédiction sur le périphérique sélectionné
+        # Effectuer la prédiction sur le périphérique sélectionné
         with tf.device(device):
-            predictions = model.predict(images, verbose=0)
+            predictions = model(images, training=False)
     except tf.errors.ResourceExhaustedError:
         print("Mémoire GPU insuffisante, basculement vers le CPU.")
         with tf.device('/CPU:0'):
-            predictions = model.predict(images, verbose=0)
+            predictions = model(images, training=False)
 
     # Convertir les prédictions en float32 si nécessaire
     predictions = tf.cast(predictions, tf.float32).numpy()
 
     batch_results = []
-    for idx, preds in enumerate(predictions):
+    for idx in range(predictions.shape[0]):
+        preds = predictions[idx]
         result_tags = []
         for i, score in enumerate(preds):
             if score >= threshold:
@@ -212,14 +223,12 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
             image = tf.io.read_file(image_path)
             image = tf.io.decode_image(image, channels=3, expand_animations=False)
             image.set_shape([None, None, 3])  # Définir explicitement la forme
-            image = tf.image.convert_image_dtype(image, tf.float32)
+            image = tf.image.convert_image_dtype(image, tf.float16)  # Utiliser float16 pour la précision mixte
             image = tf.image.resize(image, [height, width])
             return image_path, image
 
         # Appliquer la fonction de chargement et de prétraitement
         dataset = dataset.map(load_and_preprocess_image_with_path, num_parallel_calls=tf.data.AUTOTUNE)
-        # Supprimer le cache pour éviter la saturation de la mémoire
-        # dataset = dataset.cache()
         dataset = dataset.batch(batch_size)
         dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
 
@@ -228,11 +237,10 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
             # Traiter les images par batches
             for batch in dataset:
                 image_paths_batch, images_batch = batch
-                # images_batch est déjà un tenseur
                 image_paths_batch = image_paths_batch.numpy()
 
                 # Effectuer les prédictions
-                batch_results = predict_image_tags_batch(images_batch, image_paths_batch, threshold=threshold, device_type=device_type)
+                batch_results = predict_image_tags_batch(images_batch, image_paths_batch, threshold=threshold)
 
                 copy_tasks = []
 
@@ -286,7 +294,7 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
                                 copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
                             print(f"L'image '{image_path_str}' a été classée dans : {', '.join(image_characters)}")
                         else:
-                            # Si l'image ne correspond à aucun personnage, classer jour/nuit
+                            # Si l'image ne correspond à aucun personnage, classer dans 'z_daymisc_girl'
                             destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
                             copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
                             print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl'")
@@ -296,7 +304,7 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
                         copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
                         print(f"L'image '{image_path_str}' a été classée dans 'zboy'")
                     elif has_person:
-                        # L'image contient une personne (ni garçon, ni fille spécifique), classer dans misc
+                        # L'image contient une personne (ni garçon, ni fille spécifique), classer dans 'z_daymisc'
                         destination_path = os.path.join(z_daymisc_folder, new_filename)
                         copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
                         print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc'")
@@ -314,6 +322,7 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
                 del images_batch
                 del image_paths_batch
                 del batch_results
+                gc.collect()
 
         print(f"Lot {chunk_idx + 1}/{total_chunks} traité.")
 
