@@ -6,6 +6,8 @@ import shutil
 from datetime import datetime
 import tensorflow as tf
 import psutil
+from concurrent.futures import ThreadPoolExecutor
+from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
 root_folder = r'T:\_SELECT\X_-DUMBBELL NAN KILO MOTERU'
@@ -23,8 +25,11 @@ characters = {
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
 NUM_CORES = 24  # 8, 24 ou 32 cœurs CPU à utiliser
-BATCH_SIZE = 128  # Taille du batch pour le traitement des images
-MAX_MEMORY_BYTES = 10 * 1024 ** 3  # Limite de RAM allouée en bytes (10 Goctets)
+BATCH_SIZE = 32  # Taille du batch pour le traitement des images
+MAX_MEMORY_BYTES = 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets)
+
+# Activer la précision mixte
+mixed_precision.set_global_policy('mixed_float16')
 
 # Force le CPU si nécessaire
 if device_type == 'cpu':
@@ -38,12 +43,10 @@ if NUM_CORES == 8:
     p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])
 elif NUM_CORES == 24:
     # Pour 24 cœurs physiques + HT (12 cœurs physiques + 12 HT)
-    p.cpu_affinity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-                    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27])
+    p.cpu_affinity([i for i in range(12)] + [i + 16 for i in range(12)])
 elif NUM_CORES == 32:
     # Pour 32 cœurs physiques + HT (16 cœurs physiques + 16 HT)
-    p.cpu_affinity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+    p.cpu_affinity([i for i in range(16)] + [i + 16 for i in range(16)])
 else:
     # Affinité par défaut pour tous les cœurs disponibles
     available_cores = list(range(psutil.cpu_count()))
@@ -61,14 +64,14 @@ tags = dd.project.load_tags_from_project(project_path)
 # Convertir la liste des tags en un dictionnaire pour un accès plus rapide
 tags_dict = {i: tag for i, tag in enumerate(tags)}
 
-# Fonction pour détecter si une image est de nuit en fonction de sa luminosité
-def is_night_image_from_array(image_array, dark_threshold=0.2, dark_pixel_ratio=0.6):
-    # image_array est un tableau numpy de forme (hauteur, largeur, 3), valeurs entre 0 et 1
-    image_gray = np.mean(image_array, axis=2)
-    num_dark_pixels = np.sum(image_gray < dark_threshold)
-    total_pixels = image_gray.size
+# Fonction pour détecter si une image est de nuit en utilisant TensorFlow
+def is_night_image_from_tensor(image_tensor, dark_threshold=0.2, dark_pixel_ratio=0.6):
+    # image_tensor est un tenseur de forme (hauteur, largeur, 3), valeurs entre 0 et 1
+    image_gray = tf.reduce_mean(image_tensor, axis=2)
+    num_dark_pixels = tf.reduce_sum(tf.cast(image_gray < dark_threshold, tf.float32))
+    total_pixels = tf.cast(tf.size(image_gray), tf.float32)
     dark_ratio = num_dark_pixels / total_pixels
-    return dark_ratio >= dark_pixel_ratio  # Retourne True si l'image est considérée comme de nuit
+    return dark_ratio >= dark_pixel_ratio  # Retourne un tenseur booléen
 
 # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
 def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gpu'):
@@ -83,7 +86,8 @@ def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gp
         with tf.device('/CPU:0'):
             predictions = model.predict(images, verbose=0)
 
-    predictions = predictions.astype(np.float32)
+    # Convertir les prédictions en float32 si nécessaire
+    predictions = tf.cast(predictions, tf.float32).numpy()
 
     batch_results = []
     for idx, preds in enumerate(predictions):
@@ -92,7 +96,8 @@ def predict_image_tags_batch(images, image_paths, threshold=0.5, device_type='gp
             if score >= threshold:
                 result_tags.append((tags_dict[i], score))
         predicted_tags_set = set(tag for tag, score in result_tags)
-        batch_results.append((image_paths[idx], predicted_tags_set, result_tags))
+        image_path_str = image_paths[idx].decode('utf-8')
+        batch_results.append((image_path_str, predicted_tags_set, result_tags))
     return batch_results
 
 # Fonction pour nettoyer les fichiers précédemment classés
@@ -192,6 +197,9 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
     print(f"Nombre maximal d'images par lot : {max_images_per_chunk}")
     print(f"Nombre total de lots : {total_chunks}")
 
+    # Initialiser le ThreadPoolExecutor pour les copies de fichiers
+    copy_executor = ThreadPoolExecutor(max_workers=NUM_CORES)
+
     for chunk_idx in range(total_chunks):
         start_idx = chunk_idx * max_images_per_chunk
         end_idx = min(start_idx + max_images_per_chunk, total_images)
@@ -213,46 +221,47 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
 
         # Appliquer la fonction de chargement et de prétraitement
         dataset = dataset.map(load_and_preprocess_image_with_path, num_parallel_calls=tf.data.AUTOTUNE)
-
-        # Regrouper en batches
+        dataset = dataset.cache()
         dataset = dataset.batch(batch_size)
-
-        # Précharger les données
         dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
 
-        # Traiter les images par lots
+        # Traiter les images par batches
         for batch in dataset:
             image_paths_batch, images_batch = batch
-            images_batch = tf.cast(images_batch, tf.float32)
-            image_paths_batch = image_paths_batch.numpy().astype(str)
+            # images_batch est déjà un tenseur
+            image_paths_batch = image_paths_batch.numpy()
 
             # Effectuer les prédictions
             batch_results = predict_image_tags_batch(images_batch, image_paths_batch, threshold=threshold, device_type=device_type)
 
+            copy_tasks = []
+
             # Traiter les résultats du batch
-            for idx, (image_path, predicted_tags_set, result_tags) in enumerate(batch_results):
+            for idx, (image_path_str, predicted_tags_set, result_tags) in enumerate(batch_results):
                 # Afficher l'image en cours de traitement
-                print(f"Traitement de l'image : {image_path}")
+                print(f"Traitement de l'image : {image_path_str}")
 
                 # Récupérer l'image correspondante
-                image = images_batch[idx].numpy()
+                image_tensor = images_batch[idx]
+                is_night = is_night_image_from_tensor(image_tensor)
 
-                # Vérifier si l'image est de nuit
-                is_night = is_night_image_from_array(image)
+                # Convertir le résultat en booléen Python
+                is_night = bool(is_night.numpy())
 
-                # Si l'image est de nuit
+                # Classification de l'image
+                new_filename = f"{subfolder_name}_{os.path.basename(image_path_str)}"
+
                 if is_night:
-                    # Vérifier si une fille est présente
+                    # Si l'image est de nuit
                     has_girl = any(tag in predicted_tags_set for tag in girl_tags)
-                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                     if has_girl:
                         destination_path = os.path.join(z_nightmisc_girl_folder, new_filename)
-                        shutil.copy2(image_path, destination_path)
-                        print(f"L'image '{image_path}' a été classée dans 'z_nightmisc_girl'")
+                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                        print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc_girl'")
                     else:
                         destination_path = os.path.join(z_nightmisc_folder, new_filename)
-                        shutil.copy2(image_path, destination_path)
-                        print(f"L'image '{image_path}' a été classée dans 'z_nightmisc'")
+                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                        print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc'")
                     continue  # L'image a été classée, on passe à l'image suivante
 
                 # Ensuite, si l'image n'est pas de nuit, vérifier les personnages et les autres tags
@@ -273,34 +282,33 @@ def process_subfolder(subfolder_path, root_folder, threshold=0.5, match_threshol
                     if image_characters:
                         # L'image correspond à un ou plusieurs personnages
                         for character in image_characters:
-                            new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                             destination_path = os.path.join(character_folders[character], new_filename)
-                            shutil.copy2(image_path, destination_path)
-                        print(f"L'image '{image_path}' a été classée dans : {', '.join(image_characters)}")
+                            copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                        print(f"L'image '{image_path_str}' a été classée dans : {', '.join(image_characters)}")
                     else:
                         # Si l'image ne correspond à aucun personnage, classer jour/nuit
-                        new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                         destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
-                        shutil.copy2(image_path, destination_path)
-                        print(f"L'image '{image_path}' a été classée dans 'z_daymisc_girl'")
+                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                        print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl'")
                 elif has_boy:
                     # L'image contient un garçon (et pas de fille), la classer dans 'zboy'
-                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                     destination_path = os.path.join(zboy_folder, new_filename)
-                    shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans 'zboy'")
+                    copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                    print(f"L'image '{image_path_str}' a été classée dans 'zboy'")
                 elif has_person:
                     # L'image contient une personne (ni garçon, ni fille spécifique), classer dans misc
-                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                     destination_path = os.path.join(z_daymisc_folder, new_filename)
-                    shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans 'z_daymisc'")
+                    copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                    print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc'")
                 else:
                     # L'image ne contient aucune personne, la classer dans 'z_background'
-                    new_filename = f"{subfolder_name}_{os.path.basename(image_path)}"
                     destination_path = os.path.join(z_background_folder, new_filename)
-                    shutil.copy2(image_path, destination_path)
-                    print(f"L'image '{image_path}' a été classée dans 'z_background'")
+                    copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                    print(f"L'image '{image_path_str}' a été classée dans 'z_background'")
+
+            # Attendre que toutes les copies soient terminées
+            for task in copy_tasks:
+                task.result()
 
         print(f"Lot {chunk_idx + 1}/{total_chunks} traité.")
 
