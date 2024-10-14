@@ -11,15 +11,18 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\X_-DRAGON RAJA'
+root_folder = r'T:\_SELECT\X_-AKAME GA KILL'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'aki_dr': ['bangs', 'brown_eyes', 'parted_bangs','silver_hair', 'bangs', 'long_hair'],
-'chenmotong_dr': ['bangs', 'brown_eyes', 'long_hair', 'red_hair', 'very_long_hair'],
-'chenwenmen_dr': ['bangs', 'black_hair', 'blunt_bangs', 'hime_cut', 'long_hair'],
-'norma_dr':['aqua_hair', 'bangs','blunt_bangs', 'blue_eyes','long_hair'],
-'rin_dr': ['blonde_hair', 'bangs','blue_eyes', 'long_hair'],
+'akame_agk': ['black_hair', 'long_hair', 'red_eyes', 'red_eyes',  'blunt_bangs', 'straight_hair'],
+'chelsea_agk': ['brown_hair', 'hair_between_eyes', 'long_hair', 'pink_hair','very_long_hair','red_eyes', 'ahoge', 'hair_bow', 'side_bangs'],
+'Esdeath_agk': ['long_hair', 'blue_hair', 'blue_eyes',  'straight_hair'],
+'kurome_agk': ['black_eyes', 'black_hair', 'hair_between_eyes', 'long_hair','short_hair', 'blunt_bangs'],
+'leone_agk': ['blonde_hair', 'green_eyes', 'blonde_hair', 'yellow_eyes', 'spiky_hair', 'long_hair', 'messy_hair', 'ahoge', 'blunt_bangs'],
+'mine_agk': ['hair_between_eyes','long_hair', 'purple_eyes', 'purple_hair','pink_hair', 'pink_eyes', 'twintails', 'hair_bow', 'blunt_bangs'],
+'seryu_agk': ['brown_eyes', 'brown_hair','long_hair', 'side_ponytail', 'ahoge', 'blunt_bangs'],
+'sheele_agk': ['long_hair', 'purple_eyes', 'purple_hair', 'blunt_bangs', 'hair_ornament'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
