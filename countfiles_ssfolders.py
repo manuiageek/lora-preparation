@@ -2,7 +2,7 @@ import os
 
 
 # Remplace "/chemin/vers/repertoire" par le chemin du répertoire que tu veux analyser
-base_directory = r"F:\1_TO_EXTRACT\LOVE AFTER WORLD DOMINATION"
+base_directory = r"/media/hleet_user/HDD-EXT/1_TO_EXTRACT_1-2-3/City.Hunter.the.Movie.Angel.Dust.2023.MULTi.1080p.WEB.H264-FW"
 
 def count_files_in_subdirectories(base_directory):
     # Parcourir les sous-dossiers du répertoire de base

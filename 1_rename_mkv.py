@@ -4,7 +4,7 @@ import os
 
 
 # Chemin du répertoire où se trouvent les fichiers
-directory      = r"/media/hleet_user/HDD-EXT/1_TO_EXTRACT_1-2-3/City.Hunter.the.Movie.Angel.Dust.2023.MULTi.1080p.WEB.H264-FW"
+directory      = r"/media/hleet_user/HDD-EXT/1_TO_EXTRACT_1-2-3/[RPG-sama] Maison Ikkoku (BDRip Dual 960x720 x264 AAC)"
 
 # Obtenir la liste des fichiers .mkv dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith('.mkv')])
