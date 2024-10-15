@@ -11,18 +11,18 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\X_-AKAME GA KILL'
+root_folder = r'T:\_SELECT\X_-BLACK LAGOON'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'akame_agk': ['black_hair', 'long_hair', 'red_eyes', 'red_eyes',  'blunt_bangs', 'straight_hair'],
-'chelsea_agk': ['brown_hair', 'hair_between_eyes', 'long_hair', 'pink_hair','very_long_hair','red_eyes', 'ahoge', 'hair_bow', 'side_bangs'],
-'Esdeath_agk': ['long_hair', 'blue_hair', 'blue_eyes',  'straight_hair'],
-'kurome_agk': ['black_eyes', 'black_hair', 'hair_between_eyes', 'long_hair','short_hair', 'blunt_bangs'],
-'leone_agk': ['blonde_hair', 'green_eyes', 'blonde_hair', 'yellow_eyes', 'spiky_hair', 'long_hair', 'messy_hair', 'ahoge', 'blunt_bangs'],
-'mine_agk': ['hair_between_eyes','long_hair', 'purple_eyes', 'purple_hair','pink_hair', 'pink_eyes', 'twintails', 'hair_bow', 'blunt_bangs'],
-'seryu_agk': ['brown_eyes', 'brown_hair','long_hair', 'side_ponytail', 'ahoge', 'blunt_bangs'],
-'sheele_agk': ['long_hair', 'purple_eyes', 'purple_hair', 'blunt_bangs', 'hair_ornament'],
+'airi_classelite': ['glasses', 'long_hair', 'purple_eyes', 'red_hair', 'blunt_bangs', 'twintails'],
+'arisu_classelite': ['bangs','blunt_bangs','braid', 'short_hair', 'purple_eyes','light_purple_hair' ],
+'hiyori_classelite': ['braid', 'hair_ribbon', 'long_hair', 'purple_eyes', 'silver_hair','white_hair'],
+'honami_classelite': ['breasts','hair_between_eyes', 'large_breasts', 'long_hair', 'purple_eyes', 'very_long_hair', 'blonde_hair','straight_hair'],
+'kei_classelite': ['blonde_hair', 'blue_bow', 'hairband', 'long_hair','purple_eyes','blunt_bangs', 'wavy_hair',  'ponytail'],
+'mako_classelite': ['black_hair', 'blue_eyes', 'long_hair','ponytail', 'blunt_bangs'],
+'sae_classelite': ['breasts', 'cleavage', 'formal', 'hairclip', 'large_breasts', 'long_hair', 'office_lady', 'ponytail','black_hair', 'brown_eyes', 'side_bangs'],
+'suzune_classelite': ['bangs', 'black_hair','hair_ribbon','long_hair','purple_eyes', 'hair_bow', 'straight_hair'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
