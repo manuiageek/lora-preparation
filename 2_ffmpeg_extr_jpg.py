@@ -4,10 +4,10 @@ import subprocess
 
 
 # Spécifier le répertoire de base
-base_directory = r"F:\1_TO_EXTRACT_1-2-3\City.Hunter.the.Movie.Angel.Dust.2023.MULTi.1080p.WEB.H264-FW"
+base_directory = r"F:\1_TO_EXTRACT_1-2-3\[RPG-sama] Maison Ikkoku (BDRip Dual 960x720 x264 AAC)"
 
 # Obtenir la liste de tous les fichiers .mkv dans le répertoire de base
-mkv_files = [f for f in os.listdir(base_directory) if f.endswith('.mkv')]
+mkv_files = sorted([f for f in os.listdir(base_directory) if f.endswith('.mkv')], key=lambda f: os.path.getmtime(os.path.join(base_directory, f)))
 
 for file in mkv_files:
     # Chemin complet vers le fichier

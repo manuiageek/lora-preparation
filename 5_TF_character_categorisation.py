@@ -11,18 +11,17 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\X_-BLACK LAGOON'
+root_folder = r'T:\_SELECT\X_-GRANCREST SENKI'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'airi_classelite': ['glasses', 'long_hair', 'purple_eyes', 'red_hair', 'blunt_bangs', 'twintails'],
-'arisu_classelite': ['bangs','blunt_bangs','braid', 'short_hair', 'purple_eyes','light_purple_hair' ],
-'hiyori_classelite': ['braid', 'hair_ribbon', 'long_hair', 'purple_eyes', 'silver_hair','white_hair'],
-'honami_classelite': ['breasts','hair_between_eyes', 'large_breasts', 'long_hair', 'purple_eyes', 'very_long_hair', 'blonde_hair','straight_hair'],
-'kei_classelite': ['blonde_hair', 'blue_bow', 'hairband', 'long_hair','purple_eyes','blunt_bangs', 'wavy_hair',  'ponytail'],
-'mako_classelite': ['black_hair', 'blue_eyes', 'long_hair','ponytail', 'blunt_bangs'],
-'sae_classelite': ['breasts', 'cleavage', 'formal', 'hairclip', 'large_breasts', 'long_hair', 'office_lady', 'ponytail','black_hair', 'brown_eyes', 'side_bangs'],
-'suzune_classelite': ['bangs', 'black_hair','hair_ribbon','long_hair','purple_eyes', 'hair_bow', 'straight_hair'],
+'aishela_gcs': ['long_hair', 'red_eyes','purple_hair'],
+'emaluna_gcs': ['green_eyes', 'long_hair','side_ponytail','silver_hair','bangs'],
+'laura_gcs': ['blonde_hair', 'blue_eyes', 'hair_bun', 'long_hair', 'parted_hair','parted_bangs'],
+'margret_gcs': ['hair_between_eyes', 'long_hair', 'red_eyes', 'red_hair','bangs'],
+'marrine_gcs': ['blonde_hair', 'blue_eyes', 'long_hair', 'parted_hair','parted_bangs'],
+'priscilla_gcs': ['green_eyes', 'long_hair', 'pink_hair','hair_between_eyes','bangs'],
+'siluca_gcs': ['blonde_hair', 'long_hair', 'purple_eyes','hair_between_eyes'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
@@ -31,8 +30,8 @@ MATCH_THRESHOLD = 0.65
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 24  # Nombre de cœurs CPU à utiliser
-BATCH_SIZE = 32  # Taille du batch pour le traitement des images
+NUM_CORES = 16  # Nombre de cœurs CPU à utiliser
+BATCH_SIZE = 16  # Taille du batch pour le traitement des images
 MAX_MEMORY_BYTES = 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets)
 
 # Activer la précision mixte
@@ -55,12 +54,16 @@ if device_type == 'cpu':
 p = psutil.Process()  # Obtenir le processus actuel
 
 if NUM_CORES == 8:
-    p.cpu_affinity([0, 1, 2, 3, 16, 17, 18, 19])
+    # Utilisation des cœurs physiques 0 à 3, et SMT 17 à 19 (en évitant 16)
+    p.cpu_affinity([0, 1, 2, 3, 17, 18, 19, 20])
+elif NUM_CORES == 16:
+    # Utiliser les 8 cœurs physiques (0 à 7) et leurs SMT (16 à 23)
+    p.cpu_affinity([i for i in range(8)] + [i + 16 for i in range(8)])
 elif NUM_CORES == 24:
+    # Utiliser les 12 cœurs physiques (0 à 11) et leurs SMT (16 à 27)
     p.cpu_affinity([i for i in range(12)] + [i + 16 for i in range(12)])
-elif NUM_CORES == 32:
-    p.cpu_affinity([i for i in range(16)] + [i + 16 for i in range(16)])
 else:
+    # Si aucun des cas ne correspond, utiliser tous les cœurs disponibles
     available_cores = list(range(psutil.cpu_count()))
     p.cpu_affinity(available_cores)
 

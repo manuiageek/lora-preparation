@@ -9,12 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
-batch_size_gpu = 16  # Taille de lot pour le GPU
 num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
+batch_size_gpu = 16  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"T:\_SELECT\TATE NO YUUSHA"
+base_folder = r"F:\1_TO_EXTRACT_1-2-3\[RPG-sama] Maison Ikkoku (BDRip Dual 960x720 x264 AAC)"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
@@ -23,9 +23,7 @@ print(f"Utilisation du périphérique : {device}")
 # Configuration de l'affinité des cœurs CPU pour le script GPU
 if device == 'cuda':
     p = psutil.Process()  # Obtenir le processus actuel
-    p.cpu_affinity([4, 5, 6, 7, 20, 21, 22, 23])
-
-
+    p.cpu_affinity([0, 1, 2, 3, 17, 18, 19, 20])
 
 # Ajuster le nombre de threads CPU pour PyTorch si on est sur CPU
 if device == 'cpu':

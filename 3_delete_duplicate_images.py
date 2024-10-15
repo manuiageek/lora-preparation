@@ -4,7 +4,7 @@ import imagehash
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
-output_directory = r"F:\1_TO_EXTRACT_1-2-3\City.Hunter.the.Movie.Angel.Dust.2023.MULTi.1080p.WEB.H264-FW"
+output_directory = r"F:\1_TO_EXTRACT_1-2-3\[RPG-sama] Maison Ikkoku (BDRip Dual 960x720 x264 AAC)"
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
