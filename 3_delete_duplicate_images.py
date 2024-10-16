@@ -4,7 +4,7 @@ import imagehash
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
-output_directory = r"F:\1_TO_EXTRACT_1-2-3\[RPG-sama] Maison Ikkoku (BDRip Dual 960x720 x264 AAC)"
+output_directory = r"F:\1_TO_EXTRACT_1-2-3\Cat's Eye Season 1"
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel

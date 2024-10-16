@@ -11,17 +11,13 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\X_-GRANCREST SENKI'
+root_folder = r'F:\2_TO_EPURATE_4-5\_-MAISON IKKOKU'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'aishela_gcs': ['long_hair', 'red_eyes','purple_hair'],
-'emaluna_gcs': ['green_eyes', 'long_hair','side_ponytail','silver_hair','bangs'],
-'laura_gcs': ['blonde_hair', 'blue_eyes', 'hair_bun', 'long_hair', 'parted_hair','parted_bangs'],
-'margret_gcs': ['hair_between_eyes', 'long_hair', 'red_eyes', 'red_hair','bangs'],
-'marrine_gcs': ['blonde_hair', 'blue_eyes', 'long_hair', 'parted_hair','parted_bangs'],
-'priscilla_gcs': ['green_eyes', 'long_hair', 'pink_hair','hair_between_eyes','bangs'],
-'siluca_gcs': ['blonde_hair', 'long_hair', 'purple_eyes','hair_between_eyes'],
+'akemi_mi': ['bangs','long_hair','red_hair','curly_hair', 'long_hair', 'brown_eyes'],
+'kyoko_mi': ['bangs', 'black_hair', 'hair_bow', 'long_hair', 'low_ponytail', 'ponytail', 'blunt_bangs','hair_tie'],
+'sayako_mi': ['bangs', 'black_eyes', 'black_hair',  'long_hair','blunt_bangs', 'straight_hair'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
