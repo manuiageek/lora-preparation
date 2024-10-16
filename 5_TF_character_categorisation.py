@@ -11,13 +11,15 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\2_TO_EPURATE_4-5\_-MAISON IKKOKU'
+root_folder = r'T:\_SELECT\X_-BLACK LAGOON'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'akemi_mi': ['bangs','long_hair','red_hair','curly_hair', 'long_hair', 'brown_eyes'],
-'kyoko_mi': ['bangs', 'black_hair', 'hair_bow', 'long_hair', 'low_ponytail', 'ponytail', 'blunt_bangs','hair_tie'],
-'sayako_mi': ['bangs', 'black_eyes', 'black_hair',  'long_hair','blunt_bangs', 'straight_hair'],
+'balalaika_bl': ['blonde_hair', 'blue_eyes', 'long_hair', 'bangs', 'asymmetrical_bangs'],
+'fabiola_bl': ['asymmetrical_bangs', 'black_eyes','brown_eyes', 'green_hair', 'short_hair'],
+'revy_bl': ['bangs', 'brown_eyes','long_hair', 'purple_hair','side_ponytail'],
+'roberta_bl': ['black_hair', 'braid', 'braided_ponytail', 'long_hair','multiple_braids', 'single_braid', 'twin_braids','blue_eyes','blunt_bangs'],
+'shenhua_bl': ['black_eyes', 'black_hair','short_hair','long_hair'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance

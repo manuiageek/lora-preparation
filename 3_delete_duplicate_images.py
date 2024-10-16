@@ -4,7 +4,7 @@ import imagehash
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
-output_directory = r"F:\1_TO_EXTRACT_1-2-3\Cat's Eye Season 1"
+output_directory = r"F:\2_TO_EPURATE_4-5\_-MAISON IKKOKU"
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
