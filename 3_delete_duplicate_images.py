@@ -4,7 +4,8 @@ import imagehash
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
-output_directory = r"F:\2_TO_EPURATE_4-5\_-MAISON IKKOKU"
+# Spécifier le répertoire de base
+directory = r"F:\1_TO_EXTRACT_1-2-3\SPAWN"
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
@@ -74,5 +75,5 @@ def process_all_subdirectories(root_directory):
             print("Aucun doublon trouvé dans ce répertoire.")
 
 # Usage
-process_all_subdirectories(output_directory)
+process_all_subdirectories(directory)
 print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
