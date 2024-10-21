@@ -11,15 +11,11 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'T:\_SELECT\X_-BLACK LAGOON'
+root_folder = r'F:\1_TO_EXTRACT_1-2-3\SPAWN'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'balalaika_bl': ['blonde_hair', 'blue_eyes', 'long_hair', 'bangs', 'asymmetrical_bangs'],
-'fabiola_bl': ['asymmetrical_bangs', 'black_eyes','brown_eyes', 'green_hair', 'short_hair'],
-'revy_bl': ['bangs', 'brown_eyes','long_hair', 'purple_hair','side_ponytail'],
-'roberta_bl': ['black_hair', 'braid', 'braided_ponytail', 'long_hair','multiple_braids', 'single_braid', 'twin_braids','blue_eyes','blunt_bangs'],
-'shenhua_bl': ['black_eyes', 'black_hair','short_hair','long_hair'],
+'wanda_sp': ['black_eyes', 'black_hair', 'dark-skinned_female', 'dark_skin', 'short_hair'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
