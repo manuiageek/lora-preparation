@@ -14,7 +14,7 @@ batch_size_gpu = 16  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYOU UNIVERSE"
+base_folder = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYO SPECIAL"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'

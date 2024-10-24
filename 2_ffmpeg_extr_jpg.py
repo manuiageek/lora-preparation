@@ -5,7 +5,7 @@ import subprocess
 
 
 # Spécifier le répertoire de base
-directory = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYOU GXP"
+directory = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYO SPECIAL"
 
 # Obtenir la liste de tous les fichiers .mkv et .mp4 dans le répertoire de base
 video_files = sorted(

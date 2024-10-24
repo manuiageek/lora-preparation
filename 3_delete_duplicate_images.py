@@ -5,11 +5,11 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 # Spécifier le répertoire de base
-directory = r"F:\2_TO_EPURATE_4-5\_-MAISON IKKOKU"
+directory = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYO SPECIAL"
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
-THRESHOLD = 2   # Contrôle la tolérance pour considérer deux images comme doublons
+THRESHOLD = 1   # Contrôle la tolérance pour considérer deux images comme doublons
 
 def compute_image_hash(image_path):
     """Calcule le hachage perceptuel d'une image."""

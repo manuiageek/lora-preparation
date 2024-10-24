@@ -5,7 +5,7 @@ import os
 
 
 # Spécifier le répertoire de base
-directory = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYOU GXP"
+directory = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYO SPECIAL"
 
 # Obtenir la liste des fichiers .mkv et .mp4 dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith(('.mkv', '.mp4'))])

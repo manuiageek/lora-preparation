@@ -11,11 +11,13 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\1_TO_EXTRACT_1-2-3\SPAWN'
+root_folder = r'F:\2_TO_EPURATE_4-5\_-MAISON IKKOKU'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'wanda_sp': ['black_eyes', 'black_hair', 'dark-skinned_female', 'dark_skin', 'short_hair'],
+'akemi_mi': ['bangs','long_hair','red_hair','curly_hair', 'long_hair', 'brown_eyes'],
+'kyoko_mi': ['bangs', 'black_hair', 'hair_bow', 'long_hair', 'low_ponytail', 'ponytail', 'blunt_bangs','hair_tie'],
+'sayako_mi': ['bangs', 'black_eyes', 'black_hair',  'long_hair','blunt_bangs', 'straight_hair'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
