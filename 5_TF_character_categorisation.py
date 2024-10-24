@@ -11,13 +11,15 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\2_TO_EPURATE_4-5\_-MAISON IKKOKU'
+root_folder = r'F:\2_TO_EPURATE_4-5\_-GUY DOUBLE TARGET'
 
 # Dictionnaire des personnages avec leurs caractéristiques (tags)
 characters = {
-'akemi_mi': ['bangs','long_hair','red_hair','curly_hair', 'long_hair', 'brown_eyes'],
-'kyoko_mi': ['bangs', 'black_hair', 'hair_bow', 'long_hair', 'low_ponytail', 'ponytail', 'blunt_bangs','hair_tie'],
-'sayako_mi': ['bangs', 'black_eyes', 'black_hair',  'long_hair','blunt_bangs', 'straight_hair'],
+'arcana_gdt': ['earrings', 'eyelashes', 'lipstick', 'long_hair', 'red_lips','light_blue_hair', 'bangs', 'long_hair', 'blue_eyes'],
+'cara_gdt': ['blue_eyes', 'long_hair', 'light_blue_hair', 'bangs', 'long_hair', 'blue_eyes'],
+'helga_gdt': ['lipstick', 'long_hair','makeup','purple_eyes', 'purple_hair','bangs', 'blue_eyes'],
+'raina_gdt': ['blue_eyes', 'messy_hair', 'pink_hair', 'short_hair', 'spiked_hair', ],
+'slave_gdt': ['black_hair', 'dark-skinned_female', 'dark_skin', 'lips', 'messy_hair','afro', 'dark_skin', 'brown_eyes'],
 }
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
