@@ -5,7 +5,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 # Spécifier le répertoire de base
-directory = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYO SPECIAL"
+directory = r"F:\1_TO_EXTRACT_1-2-3\Sailor Moon\Eternal Movie"
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel

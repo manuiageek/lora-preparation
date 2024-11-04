@@ -9,12 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
-num_processes = 8  # Nombre de cœurs CPU pour le chargement des images
+num_processes = 16  # Nombre de cœurs CPU pour le chargement des images
 batch_size_gpu = 16  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\1_TO_EXTRACT_1-2-3\TENCHI MUYO SPECIAL"
+base_folder = r"F:\1_TO_EXTRACT_1-2-3\Sailor Moon\Crystal\-s3 - Death Busters"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
@@ -23,7 +23,19 @@ print(f"Utilisation du périphérique : {device}")
 # Configuration de l'affinité des cœurs CPU pour le script GPU
 if device == 'cuda':
     p = psutil.Process()  # Obtenir le processus actuel
-    p.cpu_affinity([0, 1, 2, 3, 17, 18, 19, 20])
+    if num_processes == 8:
+        # Utilisation des cœurs physiques 0 à 3, et SMT 17 à 19 (en évitant 16)
+        p.cpu_affinity([0, 1, 2, 3, 17, 18, 19, 20])
+    elif num_processes == 16:
+        # Utiliser les 8 cœurs physiques (0 à 7) et leurs SMT (16 à 23)
+        p.cpu_affinity([i for i in range(8)] + [i + 16 for i in range(8)])
+    elif num_processes == 24:
+        # Utiliser les 12 cœurs physiques (0 à 11) et leurs SMT (16 à 27)
+        p.cpu_affinity([i for i in range(12)] + [i + 16 for i in range(12)])
+    else:
+        # Si aucun des cas ne correspond, utiliser tous les cœurs disponibles
+        available_cores = list(range(psutil.cpu_count()))
+        p.cpu_affinity(available_cores)
 
 # Ajuster le nombre de threads CPU pour PyTorch si on est sur CPU
 if device == 'cpu':
