@@ -5,7 +5,7 @@ import subprocess
 
 
 # Spécifier le répertoire de base
-directory = r"F:\1_TO_EXTRACT_1-2-3\Sailor Moon\Eternal Movie"
+directory = r"F:\1_TO_EXTRACT_1-2-3\Isekai no Seikishi Monogatari [N]"
 
 # Obtenir la liste de tous les fichiers .mkv et .mp4 dans le répertoire de base
 video_files = sorted(

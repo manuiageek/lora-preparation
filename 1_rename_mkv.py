@@ -5,7 +5,7 @@ import os
 
 
 # Spécifier le répertoire de base
-directory = r"F:\1_TO_EXTRACT_1-2-3\Sailor Moon\Eternal Movie"
+directory = r"F:\1_TO_EXTRACT_1-2-3\Isekai no Seikishi Monogatari [N]"
 
 # Obtenir la liste des fichiers .mkv et .mp4 dans le répertoire
 files = sorted([f for f in os.listdir(directory) if f.endswith(('.mkv', '.mp4'))])
