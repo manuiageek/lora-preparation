@@ -27,8 +27,8 @@ MATCH_THRESHOLD = 0.7
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 24  # Nombre de cœurs CPU à utiliser
-BATCH_SIZE = 32  # Taille du batch pour le traitement des images
+NUM_CORES = 16  # Nombre de cœurs CPU à utiliser
+BATCH_SIZE = 20  # Taille du batch pour le traitement des images
 MAX_MEMORY_BYTES = 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets)
 
 # Activer la précision mixte
