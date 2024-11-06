@@ -1,8 +1,8 @@
 import os
 
 # Définit le chemin vers le répertoire contenant les dossiers
-path = r"F:\1_TO_EXTRACT_1-2-3\Sailor Moon\_-Eternal Movie"
-i = 40
+path = r"F:\1_TO_EXTRACT_1-2-3\SPAWN\Todd.McFarlanes.Spawn.S03.COMPLETE.720p.HMAX.WEBRip.x264-GalaxyTV[TGx]"
+i = 13
 
 # Liste tous les dossiers dans le répertoire
 for folder in sorted(os.listdir(path)):

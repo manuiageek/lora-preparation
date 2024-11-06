@@ -14,7 +14,7 @@ batch_size_gpu = 16  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\1_TO_EXTRACT_1-2-3\Isekai no Seikishi Monogatari [N]"
+base_folder = r"F:\1_TO_EXTRACT_1-2-3\SPAWN"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'

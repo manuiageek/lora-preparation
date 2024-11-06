@@ -5,7 +5,7 @@ import subprocess
 
 
 # Spécifier le répertoire de base
-directory = r"F:\1_TO_EXTRACT_1-2-3\Isekai no Seikishi Monogatari [N]"
+directory = r"F:\1_TO_EXTRACT_1-2-3\SPAWN\Todd.McFarlanes.Spawn.S03.COMPLETE.720p.HMAX.WEBRip.x264-GalaxyTV[TGx]"
 
 # Obtenir la liste de tous les fichiers .mkv et .mp4 dans le répertoire de base
 video_files = sorted(

@@ -5,7 +5,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 # Spécifier le répertoire de base
-directory = r"F:\1_TO_EXTRACT_1-2-3\Isekai no Seikishi Monogatari [N]"
+directory = r"F:\1_TO_EXTRACT_1-2-3\SPAWN\Todd.McFarlanes.Spawn.S03.COMPLETE.720p.HMAX.WEBRip.x264-GalaxyTV[TGx]"
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel

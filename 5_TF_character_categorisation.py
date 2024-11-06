@@ -1,5 +1,6 @@
 import deepdanbooru as dd
 import numpy as np
+import ast
 import os
 import glob
 import shutil
@@ -11,25 +12,23 @@ import gc
 from tensorflow.keras import mixed_precision
 
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\2_TO_EPURATE_4-5\_-GUY DOUBLE TARGET'
+root_folder = r'F:\_-SPAWN'
 
-# Dictionnaire des personnages avec leurs caractéristiques (tags)
-characters = {
-'arcana_gdt': ['earrings', 'eyelashes', 'lipstick', 'long_hair', 'red_lips','light_blue_hair', 'bangs', 'long_hair', 'blue_eyes'],
-'cara_gdt': ['blue_eyes', 'long_hair', 'light_blue_hair', 'bangs', 'long_hair', 'blue_eyes'],
-'helga_gdt': ['lipstick', 'long_hair','makeup','purple_eyes', 'purple_hair','bangs', 'blue_eyes'],
-'raina_gdt': ['blue_eyes', 'messy_hair', 'pink_hair', 'short_hair', 'spiked_hair', ],
-'slave_gdt': ['black_hair', 'dark-skinned_female', 'dark_skin', 'lips', 'messy_hair','afro', 'dark_skin', 'brown_eyes'],
-}
+# Charger le dictionnaire des personnages directement depuis le fichier
+with open('chartags/R_SPAWN.csv', 'r', encoding='utf-8') as file:
+    data = file.read()
+
+# Convertir le contenu du fichier en un dictionnaire Python
+characters = ast.literal_eval("{" + data + "}")  # Ajout des accolades pour créer un dictionnaire valide
 
 # Définir les constantes pour le seuil de prédiction et le seuil de correspondance
-THRESHOLD = 0.35
-MATCH_THRESHOLD = 0.65
+THRESHOLD = 0.4
+MATCH_THRESHOLD = 0.7
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 16  # Nombre de cœurs CPU à utiliser
-BATCH_SIZE = 16  # Taille du batch pour le traitement des images
+NUM_CORES = 24  # Nombre de cœurs CPU à utiliser
+BATCH_SIZE = 32  # Taille du batch pour le traitement des images
 MAX_MEMORY_BYTES = 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets)
 
 # Activer la précision mixte
