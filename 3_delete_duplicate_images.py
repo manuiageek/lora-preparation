@@ -3,9 +3,7 @@ from PIL import Image
 import imagehash
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
-
-# Spécifier le répertoire de base
-directory = r"F:\1_TO_EXTRACT_1-2-3\SPAWN\Todd.McFarlanes.Spawn.S03.COMPLETE.720p.HMAX.WEBRip.x264-GalaxyTV[TGx]"
+import argparse
 
 # Constantes globales pour le contrôle des valeurs
 HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
@@ -74,6 +72,20 @@ def process_all_subdirectories(root_directory):
         else:
             print("Aucun doublon trouvé dans ce répertoire.")
 
-# Usage
-process_all_subdirectories(directory)
-print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    # Afficher l'heure de fin
+    end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f"Traitement terminé le : {end_time}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Supprimer les images en doublon dans un répertoire donné.")
+    parser.add_argument(
+        "--directory",
+        type=str,
+        default=r"F:\\1_TO_EXTRACT_1-2-3\\SPAWN\\Todd.McFarlanes.Spawn.S03.COMPLETE.720p.HMAX.WEBRip.x264-GalaxyTV[TGx]",
+        help="Le chemin du répertoire contenant les fichiers à traiter."
+    )
+
+    args = parser.parse_args()
+    
+    # Appeler la fonction principale
+    process_all_subdirectories(args.directory)

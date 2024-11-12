@@ -1,3 +1,4 @@
+import argparse
 import deepdanbooru as dd
 import numpy as np
 import ast
@@ -11,11 +12,20 @@ from concurrent.futures import ThreadPoolExecutor
 import gc
 from tensorflow.keras import mixed_precision
 
+# Configuration des arguments en ligne de commande
+parser = argparse.ArgumentParser(description="Script de classification d'images")
+parser.add_argument('--root_folder', type=str, required=True, help="Chemin vers le dossier contenant les images")
+parser.add_argument('--character_file', type=str, required=True, help="Chemin vers le fichier CSV des personnages")
+
+args = parser.parse_args()
+
+# Exemple : python ton_script.py --root_folder "F:\_-SPAWN" --character_file "chartags/R_SPAWN.csv"
+
 # Chemin vers le dossier contenant les images
-root_folder = r'F:\_-SPAWN'
+root_folder = args.root_folder
 
 # Charger le dictionnaire des personnages directement depuis le fichier
-with open('chartags/R_SPAWN.csv', 'r', encoding='utf-8') as file:
+with open(args.character_file, 'r', encoding='utf-8') as file:
     data = file.read()
 
 # Convertir le contenu du fichier en un dictionnaire Python

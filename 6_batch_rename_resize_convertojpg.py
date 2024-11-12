@@ -15,7 +15,7 @@ def resize_image(image, max_size=1024):
         return image, False
 
 # Chemin du dossier contenant les images à traiter
-folder_path = r"E:\AI_WORK\TRAINED_LORA\GUY DOUBLE TARGET\cara_gdt\dataset"
+folder_path = r"E:\AI_WORK\TRAINED_LORA\SPAWN\jade_sp\dataset"
 
 # Vérifier si le dossier existe
 if not os.path.isdir(folder_path):
