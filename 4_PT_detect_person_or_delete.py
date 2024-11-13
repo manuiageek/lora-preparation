@@ -14,7 +14,7 @@ batch_size_gpu = 16  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 
 # Répertoire de base contenant les sous-dossiers
-base_folder = r"F:\1_TO_EXTRACT_1-2-3\SPAWN"
+base_folder = r"F:\TOUBUN NO HANAYOME"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
@@ -129,8 +129,8 @@ def process_subfolder(subfolder, batch_size, model, device_type='gpu', num_proce
 
 # Utiliser `if __name__ == '__main__':` pour éviter les problèmes avec multiprocessing sur Windows
 if __name__ == '__main__':
-    # Parcourir uniquement les sous-dossiers de `base_folder` et traiter chaque sous-dossier séparément
-    for subdir in os.listdir(base_folder):
+    # Parcourir uniquement les sous-dossiers de `base_folder` dans un ordre croissant
+    for subdir in sorted(os.listdir(base_folder)):
         subfolder_path = os.path.join(base_folder, subdir)
         if os.path.isdir(subfolder_path):
             print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
