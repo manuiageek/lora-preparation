@@ -1,8 +1,8 @@
 import os
 
 # Définit le chemin vers le répertoire contenant les dossiers
-path = r"F:\TOUBUN NO HANAYOME\5-toubun no Hanayome OAV"
-i = 25
+path = r"F:\_-TENCHI MUYO\_-TENCHI MUYOU GXP"
+i = 40
 
 # Liste tous les dossiers dans le répertoire
 for folder in sorted(os.listdir(path)):

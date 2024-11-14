@@ -12,90 +12,16 @@ from concurrent.futures import ThreadPoolExecutor
 import gc
 from tensorflow.keras import mixed_precision
 
-# Configuration des arguments en ligne de commande
-parser = argparse.ArgumentParser(description="Script de classification d'images")
-parser.add_argument('--root_folder', type=str, required=True, help="Chemin vers le dossier contenant les images")
-parser.add_argument('--character_file', type=str, required=True, help="Chemin vers le fichier CSV des personnages")
-
-args = parser.parse_args()
-
-# Exemple : python ton_script.py --root_folder "F:\_-SPAWN" --character_file "chartags/R_SPAWN.csv"
-
-# Chemin vers le dossier contenant les images
-root_folder = args.root_folder
-
-# Charger le dictionnaire des personnages directement depuis le fichier
-with open(args.character_file, 'r', encoding='utf-8') as file:
-    data = file.read()
-
-# Convertir le contenu du fichier en un dictionnaire Python
-characters = ast.literal_eval("{" + data + "}")  # Ajout des accolades pour créer un dictionnaire valide
-
-# Définir les constantes pour le seuil de prédiction et le seuil de correspondance
-THRESHOLD = 0.4
-MATCH_THRESHOLD = 0.7
-
-# Configuration centrale des paramètres
-device_type = 'gpu'  # 'gpu' ou 'cpu' selon vos besoins
-NUM_CORES = 16  # Nombre de cœurs CPU à utiliser
-BATCH_SIZE = 20  # Taille du batch pour le traitement des images
-MAX_MEMORY_BYTES = 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets)
-
-# Activer la précision mixte
-mixed_precision.set_global_policy('mixed_float16')
-
-# Configurer la croissance de la mémoire GPU
-physical_devices = tf.config.list_physical_devices('GPU')
-if physical_devices:
-    try:
-        for gpu in physical_devices:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except Exception as e:
-        print(e)
-
-# Force le CPU si nécessaire
-if device_type == 'cpu':
-    tf.config.set_visible_devices([], 'GPU')
-
-# Définir l'affinité des cœurs CPU pour le script TensorFlow
-p = psutil.Process()  # Obtenir le processus actuel
-
-if NUM_CORES == 8:
-    # Utilisation des cœurs physiques 0 à 3, et SMT 17 à 19 (en évitant 16)
-    p.cpu_affinity([0, 1, 2, 3, 17, 18, 19, 20])
-elif NUM_CORES == 16:
-    # Utiliser les 8 cœurs physiques (0 à 7) et leurs SMT (16 à 23)
-    p.cpu_affinity([i for i in range(8)] + [i + 16 for i in range(8)])
-elif NUM_CORES == 24:
-    # Utiliser les 12 cœurs physiques (0 à 11) et leurs SMT (16 à 27)
-    p.cpu_affinity([i for i in range(12)] + [i + 16 for i in range(12)])
-else:
-    # Si aucun des cas ne correspond, utiliser tous les cœurs disponibles
-    available_cores = list(range(psutil.cpu_count()))
-    p.cpu_affinity(available_cores)
-
-# Spécifiez le chemin vers le projet DeepDanbooru
-project_path = './models/deepdanbooru'
-
-# Charger le modèle sans le compiler pour laisser le choix du périphérique plus tard
-model = dd.project.load_model_from_project(project_path, compile_model=False)
-
-# Charger les tags associés
-tags = dd.project.load_tags_from_project(project_path)
-
-# Convertir la liste des tags en un dictionnaire pour un accès plus rapide
-tags_dict = {i: tag for i, tag in enumerate(tags)}
-
-# Fonction pour détecter si une image est de nuit en utilisant TensorFlow
 def is_night_image_from_tensor(image_tensor, dark_threshold=0.2, dark_pixel_ratio=0.6):
+    # Fonction pour détecter si une image est de nuit en utilisant TensorFlow
     image_gray = tf.reduce_mean(image_tensor, axis=2)
     num_dark_pixels = tf.reduce_sum(tf.cast(image_gray < dark_threshold, tf.float32))
     total_pixels = tf.cast(tf.size(image_gray), tf.float32)
     dark_ratio = num_dark_pixels / total_pixels
     return dark_ratio >= dark_pixel_ratio
 
-# Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
-def predict_image_tags_batch(images, image_paths, threshold=THRESHOLD):
+def predict_image_tags_batch(images, image_paths, model, tags_dict, threshold, device_type):
+    # Fonction pour prédire les tags d'un batch d'images avec un seuil de probabilité
     device = '/GPU:0' if device_type == 'gpu' else '/CPU:0'
     try:
         with tf.device(device):
@@ -119,8 +45,8 @@ def predict_image_tags_batch(images, image_paths, threshold=THRESHOLD):
         batch_results.append((image_path_str, predicted_tags_set, result_tags))
     return batch_results
 
-# Fonction pour nettoyer les fichiers précédemment classés
-def clean_previous_classifications(root_folder, subfolder_name):
+def clean_previous_classifications(root_folder, subfolder_name, characters):
+    # Fonction pour nettoyer les fichiers précédemment classés
     folders_to_clean = [os.path.join(root_folder, character) for character in characters] + \
                        [os.path.join(root_folder, 'zboy'),
                         os.path.join(root_folder, 'z_daymisc'),
@@ -137,12 +63,12 @@ def clean_previous_classifications(root_folder, subfolder_name):
                     os.remove(file_path)
                     print(f"Suppression du fichier existant : {file_path}")
 
-# Fonction pour traiter un sous-dossier
-def process_subfolder(subfolder_path, root_folder, threshold=THRESHOLD, match_threshold=MATCH_THRESHOLD, batch_size=BATCH_SIZE, device_type='gpu'):
+def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict, params):
+    # Fonction pour traiter un sous-dossier
     subfolder_name = os.path.basename(subfolder_path)
     print(f"\nTraitement du dossier : {subfolder_name}")
 
-    clean_previous_classifications(root_folder, subfolder_name)
+    clean_previous_classifications(root_folder, subfolder_name, characters)
 
     image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp')
     image_paths = []
@@ -163,28 +89,22 @@ def process_subfolder(subfolder_path, root_folder, threshold=THRESHOLD, match_th
         character_folders[character] = character_folder
 
     zboy_folder = os.path.join(root_folder, 'zboy')
-    if not os.path.exists(zboy_folder):
-        os.makedirs(zboy_folder)
+    os.makedirs(zboy_folder, exist_ok=True)
 
     z_daymisc_girl_folder = os.path.join(root_folder, 'z_daymisc_girl')
-    if not os.path.exists(z_daymisc_girl_folder):
-        os.makedirs(z_daymisc_girl_folder)
+    os.makedirs(z_daymisc_girl_folder, exist_ok=True)
 
     z_nightmisc_girl_folder = os.path.join(root_folder, 'z_nightmisc_girl')
-    if not os.path.exists(z_nightmisc_girl_folder):
-        os.makedirs(z_nightmisc_girl_folder)
+    os.makedirs(z_nightmisc_girl_folder, exist_ok=True)
 
     z_daymisc_folder = os.path.join(root_folder, 'z_daymisc')
-    if not os.path.exists(z_daymisc_folder):
-        os.makedirs(z_daymisc_folder)
+    os.makedirs(z_daymisc_folder, exist_ok=True)
 
     z_nightmisc_folder = os.path.join(root_folder, 'z_nightmisc')
-    if not os.path.exists(z_nightmisc_folder):
-        os.makedirs(z_nightmisc_folder)
+    os.makedirs(z_nightmisc_folder, exist_ok=True)
 
     z_background_folder = os.path.join(root_folder, 'z_background')
-    if not os.path.exists(z_background_folder):
-        os.makedirs(z_background_folder)
+    os.makedirs(z_background_folder, exist_ok=True)
 
     girl_tags = {'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl',
                  'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman',
@@ -197,7 +117,7 @@ def process_subfolder(subfolder_path, root_folder, threshold=THRESHOLD, match_th
 
     per_image_size = width * height * 3 * 2  # float16, 3 canaux, 2 bytes par valeur
 
-    max_images_per_chunk = int(MAX_MEMORY_BYTES / per_image_size)
+    max_images_per_chunk = int(params['MAX_MEMORY_BYTES'] / per_image_size)
     total_images = len(image_paths)
     total_chunks = (total_images + max_images_per_chunk - 1) // max_images_per_chunk
 
@@ -223,15 +143,22 @@ def process_subfolder(subfolder_path, root_folder, threshold=THRESHOLD, match_th
             return image_path, image
 
         dataset = dataset.map(load_and_preprocess_image_with_path, num_parallel_calls=tf.data.AUTOTUNE)
-        dataset = dataset.batch(batch_size)
+        dataset = dataset.batch(params['BATCH_SIZE'])
         dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
 
-        with ThreadPoolExecutor(max_workers=NUM_CORES) as copy_executor:
+        with ThreadPoolExecutor(max_workers=params['NUM_CORES']) as copy_executor:
             for batch in dataset:
                 image_paths_batch, images_batch = batch
                 image_paths_batch = image_paths_batch.numpy()
 
-                batch_results = predict_image_tags_batch(images_batch, image_paths_batch, threshold=threshold)
+                batch_results = predict_image_tags_batch(
+                    images_batch,
+                    image_paths_batch,
+                    model,
+                    tags_dict,
+                    threshold=params['THRESHOLD'],
+                    device_type=params['device_type']
+                )
 
                 copy_tasks = []
 
@@ -267,7 +194,7 @@ def process_subfolder(subfolder_path, root_folder, threshold=THRESHOLD, match_th
                             matching_tags = predicted_tags_set.intersection(char_tags)
                             match_ratio = len(matching_tags) / len(char_tags)
 
-                            if match_ratio >= match_threshold:
+                            if match_ratio >= params['MATCH_THRESHOLD']:
                                 image_characters.append(character)
 
                         if image_characters:
@@ -304,8 +231,8 @@ def process_subfolder(subfolder_path, root_folder, threshold=THRESHOLD, match_th
 
     print(f"Le dossier '{subfolder_name}' a été traité")
 
-# Fonction principale pour traiter tous les sous-dossiers
-def process_all_subfolders(root_folder, threshold=THRESHOLD, match_threshold=MATCH_THRESHOLD, batch_size=BATCH_SIZE, device_type='gpu'):
+def process_all_subfolders(root_folder, characters, model, tags_dict, params):
+    # Fonction principale pour traiter tous les sous-dossiers
     subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
     if not subfolders:
         print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}")
@@ -316,9 +243,91 @@ def process_all_subfolders(root_folder, threshold=THRESHOLD, match_threshold=MAT
                                                                      'z_daymisc_girl', 'z_nightmisc_girl',
                                                                      'z_background']:
             continue
-        process_subfolder(subfolder, root_folder, threshold, match_threshold, batch_size, device_type)
+        process_subfolder(subfolder, root_folder, characters, model, tags_dict, params)
 
-# Appeler la fonction pour traiter tous les sous-dossiers
 if __name__ == '__main__':
-    process_all_subfolders(root_folder, threshold=THRESHOLD, match_threshold=MATCH_THRESHOLD, batch_size=BATCH_SIZE, device_type=device_type)
+    parser = argparse.ArgumentParser(description="Script de classification d'images")
+    parser.add_argument(
+        '--root_folder',
+        type=str,
+        default='F:\_-TENCHI MUYO',  # Définissez ici votre chemin par défaut
+        help="Chemin vers le dossier contenant les images"
+    )
+    parser.add_argument(
+        '--character_file',
+        type=str,
+        default='chartags/R_TENCHI MUYO.csv',  # Définissez ici votre chemin par défaut
+        help="Chemin vers le fichier CSV des personnages"
+    )
+
+    args = parser.parse_args()
+
+    # Définir les constantes et les paramètres
+    params = {
+        'THRESHOLD': 0.4,
+        'MATCH_THRESHOLD': 0.7,
+        'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
+        'NUM_CORES': 16,  # Nombre de cœurs CPU à utiliser
+        'BATCH_SIZE': 20,  # Taille du batch pour le traitement des images
+        'MAX_MEMORY_BYTES': 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets)
+    }
+
+    # Activer la précision mixte
+    mixed_precision.set_global_policy('mixed_float16')
+
+    # Configurer la croissance de la mémoire GPU
+    physical_devices = tf.config.list_physical_devices('GPU')
+    if physical_devices:
+        try:
+            for gpu in physical_devices:
+                tf.config.experimental.set_memory_growth(gpu, True)
+        except Exception as e:
+            print(e)
+
+    # Force le CPU si nécessaire
+    if params['device_type'] == 'cpu':
+        tf.config.set_visible_devices([], 'GPU')
+
+    # Définir l'affinité des cœurs CPU pour le script TensorFlow
+    p = psutil.Process()  # Obtenir le processus actuel
+
+    if params['NUM_CORES'] == 8:
+        # Utilisation des cœurs physiques 0 à 3, et SMT 17 à 19 (en évitant 16)
+        p.cpu_affinity([0, 1, 2, 3, 17, 18, 19, 20])
+    elif params['NUM_CORES'] == 16:
+        # Utiliser les 8 cœurs physiques (0 à 7) et leurs SMT (16 à 23)
+        p.cpu_affinity([i for i in range(8)] + [i + 16 for i in range(8)])
+    elif params['NUM_CORES'] == 24:
+        # Utiliser les 12 cœurs physiques (0 à 11) et leurs SMT (16 à 27)
+        p.cpu_affinity([i for i in range(12)] + [i + 16 for i in range(12)])
+    else:
+        # Si aucun des cas ne correspond, utiliser tous les cœurs disponibles
+        available_cores = list(range(psutil.cpu_count()))
+        p.cpu_affinity(available_cores)
+
+    # Chemin vers le dossier contenant les images
+    root_folder = args.root_folder
+
+    # Charger le dictionnaire des personnages directement depuis le fichier
+    with open(args.character_file, 'r', encoding='utf-8') as file:
+        data = file.read()
+
+    # Convertir le contenu du fichier en un dictionnaire Python
+    characters = ast.literal_eval("{" + data + "}")  # Ajout des accolades pour créer un dictionnaire valide
+
+    # Spécifiez le chemin vers le projet DeepDanbooru
+    project_path = './models/deepdanbooru'
+
+    # Charger le modèle sans le compiler pour laisser le choix du périphérique plus tard
+    model = dd.project.load_model_from_project(project_path, compile_model=False)
+
+    # Charger les tags associés
+    tags = dd.project.load_tags_from_project(project_path)
+
+    # Convertir la liste des tags en un dictionnaire pour un accès plus rapide
+    tags_dict = {i: tag for i, tag in enumerate(tags)}
+
+    # Appeler la fonction pour traiter tous les sous-dossiers
+    process_all_subfolders(root_folder, characters, model, tags_dict, params)
+
     print(f"Traitement terminé le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
