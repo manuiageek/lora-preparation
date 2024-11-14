@@ -41,7 +41,9 @@ def predict_image_tags_batch(images, image_paths, model, tags_dict, threshold, d
             if score >= threshold:
                 result_tags.append((tags_dict[i], score))
         predicted_tags_set = set(tag for tag, score in result_tags)
-        image_path_str = image_paths[idx].decode('utf-8')
+        image_path_str = image_paths[idx]
+        if isinstance(image_path_str, bytes):
+            image_path_str = image_path_str.decode('utf-8')
         batch_results.append((image_path_str, predicted_tags_set, result_tags))
     return batch_results
 
@@ -53,7 +55,10 @@ def clean_previous_classifications(root_folder, subfolder_name, characters):
                         os.path.join(root_folder, 'z_nightmisc'),
                         os.path.join(root_folder, 'z_daymisc_girl'),
                         os.path.join(root_folder, 'z_nightmisc_girl'),
-                        os.path.join(root_folder, 'z_background')]
+                        os.path.join(root_folder, 'z_background'),
+                        os.path.join(root_folder, 'zboy', '1person'),
+                        os.path.join(root_folder, 'z_daymisc_girl', '1person'),
+                        os.path.join(root_folder, 'z_nightmisc_girl', '1person')]
 
     for folder in folders_to_clean:
         if os.path.exists(folder):
@@ -90,12 +95,18 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
 
     zboy_folder = os.path.join(root_folder, 'zboy')
     os.makedirs(zboy_folder, exist_ok=True)
+    zboy_1person_folder = os.path.join(zboy_folder, '1person')
+    os.makedirs(zboy_1person_folder, exist_ok=True)
 
     z_daymisc_girl_folder = os.path.join(root_folder, 'z_daymisc_girl')
     os.makedirs(z_daymisc_girl_folder, exist_ok=True)
+    z_daymisc_girl_1person_folder = os.path.join(z_daymisc_girl_folder, '1person')
+    os.makedirs(z_daymisc_girl_1person_folder, exist_ok=True)
 
     z_nightmisc_girl_folder = os.path.join(root_folder, 'z_nightmisc_girl')
     os.makedirs(z_nightmisc_girl_folder, exist_ok=True)
+    z_nightmisc_girl_1person_folder = os.path.join(z_nightmisc_girl_folder, '1person')
+    os.makedirs(z_nightmisc_girl_1person_folder, exist_ok=True)
 
     z_daymisc_folder = os.path.join(root_folder, 'z_daymisc')
     os.makedirs(z_daymisc_folder, exist_ok=True)
@@ -112,6 +123,7 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
     boy_tags = {'1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys', 'fat_man', 'old_man',
                 'salaryman', 'ugly_man', 'man'}
     person_tags = girl_tags.union(boy_tags).union({'solo', 'multiple_persons', 'group'})
+    one_person_tags = {'solo'}
 
     width, height = model.input_shape[2], model.input_shape[1]
 
@@ -172,12 +184,18 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
 
                     new_filename = f"{subfolder_name}_{os.path.basename(image_path_str)}"
 
+                    has_one_person = 'solo' in predicted_tags_set
+
                     if is_night:
                         has_girl = any(tag in predicted_tags_set for tag in girl_tags)
                         if has_girl:
-                            destination_path = os.path.join(z_nightmisc_girl_folder, new_filename)
+                            if has_one_person:
+                                destination_path = os.path.join(z_nightmisc_girl_1person_folder, new_filename)
+                                print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc_girl/1person'")
+                            else:
+                                destination_path = os.path.join(z_nightmisc_girl_folder, new_filename)
+                                print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc_girl'")
                             copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
-                            print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc_girl'")
                         else:
                             destination_path = os.path.join(z_nightmisc_folder, new_filename)
                             copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
@@ -191,6 +209,8 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                     if has_girl:
                         image_characters = []
                         for character, char_tags in characters.items():
+                            if len(char_tags) == 0:
+                                continue
                             matching_tags = predicted_tags_set.intersection(char_tags)
                             match_ratio = len(matching_tags) / len(char_tags)
 
@@ -203,13 +223,21 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                                 copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
                             print(f"L'image '{image_path_str}' a été classée dans : {', '.join(image_characters)}")
                         else:
-                            destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
+                            if has_one_person:
+                                destination_path = os.path.join(z_daymisc_girl_1person_folder, new_filename)
+                                print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl/1person'")
+                            else:
+                                destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
+                                print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl'")
                             copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
-                            print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl'")
                     elif has_boy:
-                        destination_path = os.path.join(zboy_folder, new_filename)
+                        if has_one_person:
+                            destination_path = os.path.join(zboy_1person_folder, new_filename)
+                            print(f"L'image '{image_path_str}' a été classée dans 'zboy/1person'")
+                        else:
+                            destination_path = os.path.join(zboy_folder, new_filename)
+                            print(f"L'image '{image_path_str}' a été classée dans 'zboy'")
                         copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
-                        print(f"L'image '{image_path_str}' a été classée dans 'zboy'")
                     elif has_person:
                         destination_path = os.path.join(z_daymisc_folder, new_filename)
                         copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
@@ -250,7 +278,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--root_folder',
         type=str,
-        default='F:\_-TENCHI MUYO',  # Définissez ici votre chemin par défaut
+        default='F:\R_-TENCHI MUYO',  # Définissez ici votre chemin par défaut
         help="Chemin vers le dossier contenant les images"
     )
     parser.add_argument(
@@ -264,11 +292,11 @@ if __name__ == '__main__':
 
     # Définir les constantes et les paramètres
     params = {
-        'THRESHOLD': 0.4,
-        'MATCH_THRESHOLD': 0.7,
+        'THRESHOLD': 0.35,
+        'MATCH_THRESHOLD': 0.85,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
         'NUM_CORES': 16,  # Nombre de cœurs CPU à utiliser
-        'BATCH_SIZE': 20,  # Taille du batch pour le traitement des images
+        'BATCH_SIZE': 30,  # Taille du batch pour le traitement des images
         'MAX_MEMORY_BYTES': 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets)
     }
 
