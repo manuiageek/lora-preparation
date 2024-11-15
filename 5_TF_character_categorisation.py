@@ -292,7 +292,7 @@ if __name__ == '__main__':
 
     # Définir les constantes et les paramètres
     params = {
-        'THRESHOLD': 0.7,
+        'THRESHOLD': 0.75,
         'MATCH_THRESHOLD': 0.35,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
         'NUM_CORES': 16,  # Nombre de cœurs CPU à utiliser
