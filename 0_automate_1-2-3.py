@@ -9,10 +9,10 @@ scripts = [
 
 # Lire les répertoires à partir du fichier automate_this.txt
 try:
-    with open("automate_this.txt", "r") as file:
+    with open("automate_1-2-3.txt", "r") as file:
         directories = [line.strip() for line in file if line.strip()]
 except FileNotFoundError:
-    print("Erreur : Le fichier 'automate_this.txt' n'existe pas.")
+    print("Erreur : Le fichier 'automate_1-2-3.txt' n'existe pas.")
     exit(1)
 
 # Boucle pour traiter chaque répertoire lu dans le fichier

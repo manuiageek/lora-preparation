@@ -278,13 +278,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--root_folder',
         type=str,
-        default='F:\R_-TENCHI MUYO',  # Définissez ici votre chemin par défaut
+        default='T:\_SELECT\R_-DUMBBELL NAN KILO MOTERU',  # Définissez ici votre chemin par défaut
         help="Chemin vers le dossier contenant les images"
     )
     parser.add_argument(
         '--character_file',
         type=str,
-        default='chartags/R_TENCHI MUYO.csv',  # Définissez ici votre chemin par défaut
+        default='chartags\R_DUMBBELL NAN KILO MOTERU.csv',  # Définissez ici votre chemin par défaut
         help="Chemin vers le fichier CSV des personnages"
     )
 
@@ -292,8 +292,8 @@ if __name__ == '__main__':
 
     # Définir les constantes et les paramètres
     params = {
-        'THRESHOLD': 0.75,
-        'MATCH_THRESHOLD': 0.35,
+        'THRESHOLD': 0.65,
+        'MATCH_THRESHOLD': 0.5,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
         'NUM_CORES': 16,  # Nombre de cœurs CPU à utiliser
         'BATCH_SIZE': 50,  # Taille du batch pour le traitement des images

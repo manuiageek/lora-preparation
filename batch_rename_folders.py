@@ -1,7 +1,7 @@
 import os
 
 # Définit le chemin vers le répertoire contenant les dossiers
-path = r"F:\_-TENCHI MUYO"
+path = r"T:\_SELECT\R_-DUMBBELL NAN KILO MOTERU"
 i = 1
 
 # Liste tous les dossiers dans le répertoire
