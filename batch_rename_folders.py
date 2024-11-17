@@ -1,7 +1,7 @@
 import os
 
 # Définit le chemin vers le répertoire contenant les dossiers
-path = r"T:\_SELECT\R_-DUMBBELL NAN KILO MOTERU"
+path = r"T:\_SELECT\R_-MAISON IKKOKU"
 i = 1
 
 # Liste tous les dossiers dans le répertoire

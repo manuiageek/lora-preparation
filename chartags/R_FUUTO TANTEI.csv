@@ -1,5 +1,4 @@
-'akiko_ft': ['brown_eyes', 'brown_hair', 'long_hair','ponytail','bangs', 'blunt_bangs'],
-'kanna_ft': ['bangs', 'bare_shoulders', 'brown_eyes', 'brown_hair',  'long_hair','hair_between_eyes','blunt_bangs', 'straight_hair'], 
-'kurumi_ft': ['long_hair','asymmetrical_bangs','bangs','blue_eyes','straight_hair'], 
-'tokime_ft': ['long_hair', 'purple_eyes', 'purple_hair','parted_bangs','bangs'],
-
+'akiko_ft': ['brown_eyes', 'brown_hair', 'long_hair','ponytail', 'blunt_bangs'],
+'kanna_ft': ['brown_eyes', 'brown_hair',  'long_hair','hair_between_eyes','straight_hair'], 
+'kurumi_ft': ['long_hair','asymmetrical_bangs','blue_eyes','straight_hair'], 
+'tokime_ft': ['long_hair', 'purple_eyes', 'purple_hair'],

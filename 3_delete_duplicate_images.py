@@ -17,7 +17,7 @@ def set_cpu_affinity():
     p = psutil.Process()  # Obtenir le processus actuel
 
     # Définissez le nombre de processus ici
-    num_processes = 32  # Modifiez cette valeur selon vos besoins
+    num_processes = 16  # Modifiez cette valeur selon vos besoins
 
     # Définir l'affinité des cœurs CPU en fonction de num_processes
     if num_processes == 8:
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--directory",
         type=str,
-        default=r"T:\_SELECT\R_-TENCHI MUYO",
+        default=r"T:\_SELECT\R_-FUUTO TANTEI",
         help="Le chemin du répertoire contenant les fichiers à traiter."
     )
 
