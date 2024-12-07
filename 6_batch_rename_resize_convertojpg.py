@@ -14,8 +14,8 @@ def resize_image(image, max_size=1024):
     else:
         return image, False
 
-# Chemin du dossier contenant les images à traiter
-folder_path = r"E:\AI_WORK\TRAINED_LORA\SPAWN\jade_sp\dataset"
+# Demander le chemin du dossier contenant les images à traiter
+folder_path = input("Entrez le chemin du dossier contenant les images à traiter : ").strip()
 
 # Vérifier si le dossier existe
 if not os.path.isdir(folder_path):

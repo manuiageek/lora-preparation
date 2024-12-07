@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--directory",
         type=str,
-        default=r"T:\_SELECT\R_-MAISON IKKOKU\z_daymisc_girl",
+        default=r"E:\AI_WORK\TRAINED_LORA\TENCHI MUYO",
         help="Le chemin du répertoire contenant les fichiers à traiter."
     )
 
