@@ -7,7 +7,7 @@ from datetime import datetime
 def extract_frames(directory):
     # Obtenir la liste de tous les fichiers .mkv et .mp4 dans le répertoire de base
     video_files = sorted(
-        [f for f in os.listdir(directory) if f.endswith(('.mkv', '.mp4'))],
+        [f for f in os.listdir(directory) if f.endswith(('.mkv', '.mp4','.mpg','.avi'))],
         key=lambda f: os.path.getmtime(os.path.join(directory, f))
     )
 

@@ -3,7 +3,7 @@ import argparse
 
 def rename_files(directory):
     # Obtenir la liste des fichiers .mkv et .mp4 dans le répertoire
-    files = sorted([f for f in os.listdir(directory) if f.endswith(('.mkv', '.mp4'))])
+    files = sorted([f for f in os.listdir(directory) if f.endswith(('.mkv', '.mp4','.mpg','.avi'))])
 
     # Boucle pour renommer les fichiers
     for index, file in enumerate(files, start=1):
