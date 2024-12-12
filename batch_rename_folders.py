@@ -18,8 +18,8 @@ def demander_index():
             print("La valeur de départ doit être un entier. Veuillez réessayer.")
 
 # Demande à l'utilisateur les informations nécessaires
-path = demander_chemin()
 i = demander_index()
+path = demander_chemin()
 
 # Liste tous les dossiers dans le répertoire
 for folder in sorted(os.listdir(path)):
