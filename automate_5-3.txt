@@ -1,1 +1,1 @@
-T:\_SELECT\R_-MAISON IKKOKU;chartags\R_MAISON IKKOKU.csv
+F:\_-TENCHI MUYO;chartags\R_TENCHI MUYO.csv
