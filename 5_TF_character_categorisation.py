@@ -278,13 +278,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--root_folder',
         type=str,
-        default='T:\_SELECT\R_-DUMBBELL NAN KILO MOTERU',  # Définissez ici votre chemin par défaut
+        default='F:\-POLICENAUTS',  # Définissez ici votre chemin par défaut
         help="Chemin vers le dossier contenant les images"
     )
     parser.add_argument(
         '--character_file',
         type=str,
-        default='chartags\R_DUMBBELL NAN KILO MOTERU.csv',  # Définissez ici votre chemin par défaut
+        default='chartags\R_POLICENAUTS.csv',  # Définissez ici votre chemin par défaut
         help="Chemin vers le fichier CSV des personnages"
     )
 
