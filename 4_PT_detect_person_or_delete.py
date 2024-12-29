@@ -1,26 +1,24 @@
 import os
 import cv2
 import torch
-import psutil  # Importer psutil pour l'affinité CPU sur Windows
+import psutil
 from datetime import datetime
 from ultralytics import YOLO
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+import argparse  # <-- Ajout pour gérer les arguments en ligne de commande
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
-num_processes = 16  # Nombre de cœurs CPU pour le chargement des images
+num_processes = 16   # Nombre de cœurs CPU pour le chargement des images
 batch_size_gpu = 16  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
-
-# Répertoire de base contenant les sous-dossiers
-base_folder = r"T:\_SELECT\-PILOT CANDIDATE"
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
 print(f"Utilisation du périphérique : {device}")
 
-# Configuration de l'affinité des cœurs CPU pour le script GPU
+# Configuration de l'affinité des cœurs CPU pour le script GPU (facultatif, dépend de ta machine)
 if device == 'cuda':
     p = psutil.Process()  # Obtenir le processus actuel
     if num_processes == 8:
@@ -51,7 +49,7 @@ model = YOLO(str(model_path))  # Charger le modèle
 # Taille de l'image pour réduire l'utilisation de la VRAM
 target_size = (640, 640)  # Redimensionner les images à 640x640
 
-# Fonction pour charger une image et redimensionner (CPU)
+# Fonction pour charger une image et la redimensionner (CPU)
 def load_and_resize_image(image_path):
     img = cv2.imread(image_path)
     if img is not None:
@@ -61,23 +59,24 @@ def load_and_resize_image(image_path):
 # Fonction pour traiter un lot d'images (GPU ou CPU)
 def process_batch(images_batch, paths_batch, model, device_type='gpu'):
     try:
-        device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
-        model.to(device)  # Envoyer le modèle sur le périphérique sélectionné
+        device_local = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
+        model.to(device_local)  # Envoyer le modèle sur le périphérique sélectionné
         
-        if device == 'cuda':
+        if device_local == 'cuda':
             autocast_context = torch.amp.autocast('cuda')
         else:
             autocast_context = torch.no_grad()  # Sur CPU, utiliser torch.no_grad()
 
         with autocast_context:
-            # Désactiver les logs de prédiction en ajoutant verbose=False
-            results = model(images_batch, verbose=False)  # Appeler directement l'inférence sur les images (numpy.ndarray)
+            # Désactiver les logs de prédiction (verbose=False)
+            results = model(images_batch, verbose=False)
 
         for i, result in enumerate(results):
             animeface_detected = False
 
             for detection in result.boxes.data:
-                if int(detection[-1]) == 0:  # Classe 0 pour les visages d'anime
+                # Classe 0 pour les visages d'anime (selon ton jeu de classes YOLO)
+                if int(detection[-1]) == 0:
                     animeface_detected = True
                     break
 
@@ -86,7 +85,7 @@ def process_batch(images_batch, paths_batch, model, device_type='gpu'):
                 os.remove(paths_batch[i])
             else:
                 print(f"Image OK : {paths_batch[i]}")
-    
+
     except torch.cuda.OutOfMemoryError:
         print("Mémoire GPU insuffisante, basculement vers le CPU.")
         process_batch(images_batch, paths_batch, model, 'cpu')  # Retenter le traitement sur le CPU
@@ -127,13 +126,26 @@ def process_subfolder(subfolder, batch_size, model, device_type='gpu', num_proce
     if images_batch:
         process_batch(images_batch, paths_batch, model, device_type)
 
-# Utiliser `if __name__ == '__main__':` pour éviter les problèmes avec multiprocessing sur Windows
 if __name__ == '__main__':
+    # Ajout de l'argument parser pour récupérer le répertoire passé en paramètre
+    parser = argparse.ArgumentParser(description="Détection d'anime face et suppression des images vides")
+    parser.add_argument("--directory", type=str, required=True, help="Répertoire à traiter")
+    args = parser.parse_args()
+
+    # On récupère le répertoire depuis l'argument --directory
+    base_folder = args.directory
+
     # Parcourir uniquement les sous-dossiers de `base_folder` dans un ordre croissant
     for subdir in sorted(os.listdir(base_folder)):
         subfolder_path = os.path.join(base_folder, subdir)
         if os.path.isdir(subfolder_path):
             print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
-            process_subfolder(subfolder_path, batch_size, model, device_type=device_type, num_processes=num_processes)
+            process_subfolder(
+                subfolder_path,
+                batch_size,
+                model,
+                device_type=device_type,
+                num_processes=num_processes
+            )
             print(f"Traitement du sous-dossier {subfolder_path} terminé.")
             print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
