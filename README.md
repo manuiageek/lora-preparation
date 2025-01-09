@@ -5,7 +5,7 @@ Some python scripts (written with the help of chatgpt) that I use to prepare LoR
 - 4_detect_person_or_delete.py : it loads yolov8x6_animeface model in order to check if AI can find a "face" inside loop of images in a folder. Deleting any image that doesn't contain "anime face" in the frame to save disk space.
 - 5_character_categorisation.py : https://github.com/KichangKim/DeepDanbooru/releases
 - 6_batch_rename_resize_convertojpg.py
-- 7_Comfyui_PREPLORA.json : workflow for comfyui
+- 7_Comfyui_CAPTION_TXT.json : workflow for comfyui to caption every image from folder
 
 GPU ACCELERATION : 
 For gpu acceleration, use miniconda : https://docs.anaconda.com/miniconda/
