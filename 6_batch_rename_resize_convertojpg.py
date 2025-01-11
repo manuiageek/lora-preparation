@@ -1,4 +1,5 @@
 import os
+import sys
 from PIL import Image
 import shutil
 
@@ -16,6 +17,14 @@ def resize_image(image, max_size=1024):
         return image.resize((new_width, new_height), Image.LANCZOS), True
     else:
         return image, False
+
+# Vérifier les arguments passés au script
+keep_names = False
+if len(sys.argv) > 1 and sys.argv[1].lower() == "keep":
+    keep_names = True
+    print("Mode 'keep' activé : les noms de fichiers d'origine seront conservés.")
+else:
+    print("Mode standard : les fichiers seront renommés en 001, 002, etc.")
 
 # Chemins fixes pour le dossier des images à traiter et le dossier de sortie
 input_folder = r"G:\GIGAPIXELS\UPSCALED"
@@ -42,8 +51,13 @@ for file in files:
     # Vérifier si c'est un fichier (et non un sous-dossier)
     if os.path.isfile(file_path):
         try:
-            # Nouveau nom pour le fichier dans le dossier de sortie
-            new_filename = f"{str(counter).zfill(3)}.jpg"
+            if keep_names:
+                # Conserver le nom de fichier original
+                new_filename = os.path.splitext(file)[0] + ".jpg"
+            else:
+                # Nouveau nom pour le fichier dans le dossier de sortie
+                new_filename = f"{str(counter).zfill(3)}.jpg"
+            
             new_filepath = os.path.join(output_folder, new_filename)
 
             # Ouvrir l'image avec PIL
@@ -55,12 +69,13 @@ for file in files:
                 resized_img = resized_img.convert('RGB')  # Convertir en RGB pour éviter les erreurs lors de la sauvegarde en JPG
                 resized_img.save(new_filepath, 'JPEG')
 
-            # Incrémenter le compteur après chaque fichier converti
-            counter += 1
+            if not keep_names:
+                # Incrémenter le compteur après chaque fichier converti
+                counter += 1
 
         except Exception as e:
             print(f"Impossible de traiter le fichier {file}: {e}")
     else:
         print(f"'{file}' est un dossier, passage au fichier suivant.")
 
-print(f"Traitement terminé. {counter - 1} fichiers convertis.")
+print(f"Traitement terminé. {'Tous les fichiers ont été conservés avec leurs noms d\'origine.' if keep_names else f'{counter - 1} fichiers convertis.'}")

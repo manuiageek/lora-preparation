@@ -58,7 +58,10 @@ def clean_previous_classifications(root_folder, subfolder_name, characters):
                         os.path.join(root_folder, 'z_background'),
                         os.path.join(root_folder, 'zboy', '1person'),
                         os.path.join(root_folder, 'z_daymisc_girl', '1person'),
-                        os.path.join(root_folder, 'z_nightmisc_girl', '1person')]
+                        os.path.join(root_folder, 'z_nightmisc_girl', '1person'),
+                        # Dossier fermé si on veut aussi les supprimer
+                        os.path.join(root_folder, 'z_closed_eyes')
+                       ]
 
     for folder in folders_to_clean:
         if os.path.exists(folder):
@@ -93,6 +96,7 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
             os.makedirs(character_folder)
         character_folders[character] = character_folder
 
+    # Création des dossiers existants
     zboy_folder = os.path.join(root_folder, 'zboy')
     os.makedirs(zboy_folder, exist_ok=True)
     zboy_1person_folder = os.path.join(zboy_folder, '1person')
@@ -117,11 +121,19 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
     z_background_folder = os.path.join(root_folder, 'z_background')
     os.makedirs(z_background_folder, exist_ok=True)
 
-    girl_tags = {'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl',
-                 'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman',
-                 'policewoman', 'woman'}
-    boy_tags = {'1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys', 'fat_man', 'old_man',
-                'salaryman', 'ugly_man', 'man'}
+    # Nouveau dossier pour les yeux fermés
+    z_closed_eyes_folder = os.path.join(root_folder, 'z_closed_eyes')
+    os.makedirs(z_closed_eyes_folder, exist_ok=True)
+
+    girl_tags = {
+        '1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl',
+        'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman',
+        'policewoman', 'woman'
+    }
+    boy_tags = {
+        '1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys', 'fat_man', 'old_man',
+        'salaryman', 'ugly_man', 'man'
+    }
     person_tags = girl_tags.union(boy_tags).union({'solo', 'multiple_persons', 'group'})
     one_person_tags = {'solo'}
 
@@ -179,13 +191,26 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
 
                     image_tensor = images_batch[idx]
                     is_night = is_night_image_from_tensor(image_tensor)
-
                     is_night = bool(is_night.numpy())
 
                     new_filename = f"{subfolder_name}_{os.path.basename(image_path_str)}"
 
                     has_one_person = 'solo' in predicted_tags_set
 
+                    # =======================
+                    # NOUVELLE CONDITION
+                    # =======================
+                    # Si 1 personne est détectée ET si "closed_eyes" est présent,
+                    # alors on place l'image dans le dossier z_closed_eyes.
+                    if has_one_person and 'closed_eyes' in predicted_tags_set:
+                        destination_path = os.path.join(z_closed_eyes_folder, new_filename)
+                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                        print(f"L'image '{image_path_str}' a été classée dans 'z_closed_eyes'")
+                        continue  # On ne va pas plus loin dans la logique de tri.
+
+                    # =======================
+                    # TRI JOUR/NUIT + GENRE
+                    # =======================
                     if is_night:
                         has_girl = any(tag in predicted_tags_set for tag in girl_tags)
                         if has_girl:
@@ -230,6 +255,7 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                                 destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
                                 print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl'")
                             copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+
                     elif has_boy:
                         if has_one_person:
                             destination_path = os.path.join(zboy_1person_folder, new_filename)
@@ -238,10 +264,12 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                             destination_path = os.path.join(zboy_folder, new_filename)
                             print(f"L'image '{image_path_str}' a été classée dans 'zboy'")
                         copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+
                     elif has_person:
                         destination_path = os.path.join(z_daymisc_folder, new_filename)
                         copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
                         print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc'")
+
                     else:
                         destination_path = os.path.join(z_background_folder, new_filename)
                         copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
@@ -267,9 +295,11 @@ def process_all_subfolders(root_folder, characters, model, tags_dict, params):
         return
 
     for subfolder in subfolders:
-        if os.path.basename(subfolder) in list(characters.keys()) + ['zboy', 'z_daymisc', 'z_nightmisc',
-                                                                     'z_daymisc_girl', 'z_nightmisc_girl',
-                                                                     'z_background']:
+        if os.path.basename(subfolder) in list(characters.keys()) + [
+            'zboy', 'z_daymisc', 'z_nightmisc',
+            'z_daymisc_girl', 'z_nightmisc_girl', 'z_background',
+            'z_closed_eyes'
+        ]:
             continue
         process_subfolder(subfolder, root_folder, characters, model, tags_dict, params)
 
@@ -295,9 +325,9 @@ if __name__ == '__main__':
         'THRESHOLD': 0.65,
         'MATCH_THRESHOLD': 0.5,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
-        'NUM_CORES': 16,  # Nombre de cœurs CPU à utiliser
-        'BATCH_SIZE': 50,  # Taille du batch pour le traitement des images
-        'MAX_MEMORY_BYTES': 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Goctets)
+        'NUM_CORES': 16,       # Nombre de cœurs CPU à utiliser
+        'BATCH_SIZE': 50,      # Taille du batch pour le traitement des images
+        'MAX_MEMORY_BYTES': 12 * 1024 ** 3  # Limite de RAM allouée en bytes (12 Go)
     }
 
     # Activer la précision mixte
