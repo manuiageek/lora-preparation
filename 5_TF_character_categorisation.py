@@ -322,8 +322,8 @@ if __name__ == '__main__':
 
     # Définir les constantes et les paramètres
     params = {
-        'THRESHOLD': 0.65,
-        'MATCH_THRESHOLD': 0.5,
+        'THRESHOLD': 0.55,
+        'MATCH_THRESHOLD': 0.55,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
         'NUM_CORES': 16,       # Nombre de cœurs CPU à utiliser
         'BATCH_SIZE': 50,      # Taille du batch pour le traitement des images
