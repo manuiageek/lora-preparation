@@ -1,10 +1,9 @@
 [[subsets]]
 caption_extension = ".txt"
-flip_aug = true
-image_dir = "G:\\TRAIN_LORA\\_training_lora\\zzmel\\img"
+image_dir = "E:\\AI_WORK\\TRAINED_LORA\\SKELETON KNIGHT\\ariane_sk\\img"
 keep_tokens = 1
 name = "img"
-num_repeats = 2
+num_repeats = 1
 shuffle_caption = true
 
 [train_mode]
@@ -13,6 +12,7 @@ train_mode = "lora"
 [general_args.args]
 max_data_loader_n_workers = 1
 persistent_data_loader_workers = true
+pretrained_model_name_or_path = "G:/STABLE-DIFFUSION/ComfyUI/ComfyUI/models/checkpoints/ILLUST-XL/noobaiXLNAIXL_epsilonPred11Version.safetensors"
 vae = "G:/STABLE-DIFFUSION/ComfyUI/ComfyUI/models/vae/sdxl_vae.safetensors"
 sdxl = true
 no_half_vae = true
@@ -26,7 +26,6 @@ prior_loss_weight = 1.0
 sdpa = true
 max_train_epochs = 15
 cache_latents = true
-pretrained_model_name_or_path = "G:/STABLE-DIFFUSION/ComfyUI/ComfyUI/models/checkpoints/ILLUST-XL/noobaiXLNAIXL_epsilonPred11Version.safetensors"
 
 [general_args.dataset_args]
 resolution = 1024
@@ -54,11 +53,11 @@ max_grad_norm = 0.8
 min_snr_gamma = 5
 
 [saving_args.args]
-output_dir = "E:/AI_WORK/loras/NEWLORA"
-output_name = "zzmel"
+output_name = "lora_output"
 save_precision = "fp16"
 save_model_as = "safetensors"
 save_every_n_epochs = 1
+output_dir = "E:/AI_WORK/loras/NEWLORA/ariane_sk"
 
 [noise_args.args]
 noise_offset = 0.04
