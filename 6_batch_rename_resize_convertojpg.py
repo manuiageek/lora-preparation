@@ -78,5 +78,4 @@ for file in files:
     else:
         print(f"'{file}' est un dossier, passage au fichier suivant.")
 
-message = "Tous les fichiers ont été conservés avec leurs noms d'origine." if keep_names else f"{counter - 1} fichiers convertis."
-print(f"Traitement terminé. {message}")
+print(f"Traitement terminé. Tous les fichiers ont été conservés avec leurs noms d'origine." if keep_names else f"{counter - 1} fichiers convertis.")
