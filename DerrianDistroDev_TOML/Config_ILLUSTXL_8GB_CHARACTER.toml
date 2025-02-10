@@ -1,9 +1,9 @@
 [[subsets]]
 caption_extension = ".txt"
-image_dir = "E:\\AI_WORK\\TRAINED_LORA\\SKELETON KNIGHT\\ariane_sk\\img"
+image_dir = "E:\\AI_WORK\\TRAINED_LORA\\TENCHI MUYO\\nagi_tm\\img"
 keep_tokens = 1
 name = "img"
-num_repeats = 1
+num_repeats = 3
 shuffle_caption = true
 
 [train_mode]
@@ -57,7 +57,7 @@ output_name = "lora_output"
 save_precision = "fp16"
 save_model_as = "safetensors"
 save_every_n_epochs = 1
-output_dir = "E:/AI_WORK/loras/NEWLORA/ariane_sk"
+output_dir = "E:/AI_WORK/loras/NEWLORA/nagi_tm"
 
 [noise_args.args]
 noise_offset = 0.04

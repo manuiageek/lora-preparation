@@ -6,14 +6,13 @@ from datetime import datetime
 from ultralytics import YOLO
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-import argparse
+import argparse  # <-- Ajout pour gérer les arguments en ligne de commande
 
 # Configuration centrale des paramètres
 device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
-num_processes = 16   # Nombre de cœurs CPU pour le chargement des images
-batch_size_gpu = 10  # Taille de lot pour le GPU
+num_processes = 8   # Nombre de cœurs CPU pour le chargement des images
+batch_size_gpu = 8  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
-pool_size = 1000  # Taille du pool d'images
 
 # Déterminer le périphérique (GPU ou CPU)
 device = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
@@ -23,12 +22,16 @@ print(f"Utilisation du périphérique : {device}")
 if device == 'cuda':
     p = psutil.Process()  # Obtenir le processus actuel
     if num_processes == 8:
+        # Utilisation des cœurs physiques 0 à 3, et SMT 17 à 19 (en évitant 16)
         p.cpu_affinity([0, 1, 2, 3, 17, 18, 19, 20])
     elif num_processes == 16:
+        # Utiliser les 8 cœurs physiques (0 à 7) et leurs SMT (16 à 23)
         p.cpu_affinity([i for i in range(8)] + [i + 16 for i in range(8)])
     elif num_processes == 24:
+        # Utiliser les 12 cœurs physiques (0 à 11) et leurs SMT (16 à 27)
         p.cpu_affinity([i for i in range(12)] + [i + 16 for i in range(12)])
     else:
+        # Si aucun des cas ne correspond, utiliser tous les cœurs disponibles
         available_cores = list(range(psutil.cpu_count()))
         p.cpu_affinity(available_cores)
 
@@ -87,42 +90,38 @@ def process_batch(images_batch, paths_batch, model, device_type='gpu'):
         print("Mémoire GPU insuffisante, basculement vers le CPU.")
         process_batch(images_batch, paths_batch, model, 'cpu')  # Retenter le traitement sur le CPU
 
-# Générateur pour charger les images par lot
-def image_generator(subfolder, pool_size):
+# Fonction pour traiter un sous-dossier complet en parallèle (redimensionnement sur CPU)
+def process_subfolder(subfolder, batch_size, model, device_type='gpu', num_processes=12):
+    images_in_memory = []
+    paths_in_memory = []
+
+    # Charger toutes les images du sous-dossier en RAM en parallèle
     with ThreadPoolExecutor(max_workers=num_processes) as executor:
         futures = []
         for filename in os.listdir(subfolder):
             if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
                 image_path = os.path.join(subfolder, filename)
                 futures.append(executor.submit(load_and_resize_image, image_path))
-                if len(futures) >= pool_size:
-                    for future in futures:
-                        img_resized, image_path = future.result()
-                        if img_resized is not None:
-                            yield img_resized, image_path
-                    futures = []
-        # Traiter les images restantes
+        
         for future in futures:
             img_resized, image_path = future.result()
             if img_resized is not None:
-                yield img_resized, image_path
+                images_in_memory.append(img_resized)
+                paths_in_memory.append(image_path)
 
-# Fonction pour traiter un sous-dossier complet en parallèle (redimensionnement sur CPU)
-def process_subfolder(subfolder, batch_size, model, device_type='gpu', num_processes=12, pool_size=1000):
+    # Traiter les images par lots (inférence sur GPU ou CPU)
     images_batch = []
     paths_batch = []
-    
-    gen = image_generator(subfolder, pool_size)
-    
-    for img, image_path in gen:
+
+    for img, image_path in zip(images_in_memory, paths_in_memory):
         images_batch.append(img)
         paths_batch.append(image_path)
 
         if len(images_batch) == batch_size:
             process_batch(images_batch, paths_batch, model, device_type)
-            images_batch = []
+            images_batch = []  # Réinitialiser le lot après traitement
             paths_batch = []
-    
+
     # Traiter les images restantes dans le sous-dossier
     if images_batch:
         process_batch(images_batch, paths_batch, model, device_type)
@@ -146,8 +145,7 @@ if __name__ == '__main__':
                 batch_size,
                 model,
                 device_type=device_type,
-                num_processes=num_processes,
-                pool_size=pool_size
+                num_processes=num_processes
             )
             print(f"Traitement du sous-dossier {subfolder_path} terminé.")
             print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
