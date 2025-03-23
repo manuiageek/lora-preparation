@@ -11,9 +11,8 @@ HEADERS = {"Content-Type": "application/json"}
 WORKFLOW_FILE = "CAPTION_API.json"  # Chemin vers le fichier JSON du workflow
 
 # ---------------------------
-# Chemin et extensions
+# Extensions autorisées
 # ---------------------------
-BASE_DIR = r"E:\AI_WORK\TRAINED_LORA\FAIRY TAIL 100 YEARS QUEST\_TEST"
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.tif', '.heic'}
 
 def list_images_from_ref_dirs(base_directory):
@@ -73,6 +72,14 @@ def call_api_for_image(image_path, workflow_template):
         return None
 
 if __name__ == "__main__":
+    # Demande à l'utilisateur le dossier de base où réaliser le traitement des images
+    while True:
+        BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base : ").strip()
+        if os.path.isdir(BASE_DIR):
+            break
+        else:
+            print("Le chemin saisi n'est pas un dossier valide. Veuillez réessayer.")
+
     # Charger le template du workflow une seule fois
     try:
         with open(WORKFLOW_FILE, "r", encoding="utf-8") as f:
