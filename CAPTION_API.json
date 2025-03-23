@@ -1,0 +1,129 @@
+{
+  "65": {
+    "inputs": {
+      "model": "wd-swinv2-tagger-v3",
+      "threshold": 0.2,
+      "character_threshold": 0.85,
+      "replace_underscore": false,
+      "trailing_comma": false,
+      "exclude_tags": [
+        "105",
+        0
+      ],
+      "tags": "",
+      "image": [
+        "90",
+        0
+      ]
+    },
+    "class_type": "WD14Tagger|pysssss",
+    "_meta": {
+      "title": "WD14 Tagger 🐍"
+    }
+  },
+  "66": {
+    "inputs": {
+      "Prepend": [
+        "67",
+        0
+      ],
+      "Append": [
+        "65",
+        0
+      ],
+      "Delimiter": ","
+    },
+    "class_type": "DF_String_Concatenate",
+    "_meta": {
+      "title": "String Concatenate"
+    }
+  },
+  "67": {
+    "inputs": {
+      "Text": "KEYWORD_PARAM"
+    },
+    "class_type": "DF_DynamicPrompts_Text_Box",
+    "_meta": {
+      "title": "KEYWORD_PARAM"
+    }
+  },
+  "68": {
+    "inputs": {
+      "text": [
+        "66",
+        0
+      ],
+      "text2": ""
+    },
+    "class_type": "ShowText|pysssss",
+    "_meta": {
+      "title": "Final Caption"
+    }
+  },
+  "90": {
+    "inputs": {
+      "image_path": [
+        "94",
+        0
+      ],
+      "RGBA": "false",
+      "filename_text_extension": "false"
+    },
+    "class_type": "Image Load",
+    "_meta": {
+      "title": "Image Load"
+    }
+  },
+  "94": {
+    "inputs": {
+      "value": "PATH_IMG_PARAM"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "PATH_IMG_PARAM"
+    }
+  },
+  "100": {
+    "inputs": {
+      "text": [
+        "68",
+        0
+      ],
+      "path": [
+        "103",
+        0
+      ],
+      "filename_prefix": [
+        "90",
+        2
+      ],
+      "filename_delimiter": "",
+      "filename_number_padding": 0,
+      "file_extension": ".txt",
+      "encoding": "utf-8",
+      "filename_suffix": ""
+    },
+    "class_type": "Save Text File",
+    "_meta": {
+      "title": "Save Text File"
+    }
+  },
+  "103": {
+    "inputs": {
+      "value": "PATH_PARAM"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "PATH_PARAM"
+    }
+  },
+  "105": {
+    "inputs": {
+      "Text": "TAGS_EXCLUDED_PARAM"
+    },
+    "class_type": "DF_Text_Box",
+    "_meta": {
+      "title": "TAGS_EXCLUDED_PARAM"
+    }
+  }
+}
