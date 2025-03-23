@@ -46,7 +46,7 @@ def call_api_for_image(image_path, workflow_template):
     
     # Modification des paramètres du workflow :
     # Exemple de TAGS_EXCLUDED_PARAM (peut rester en dur)
-    workflow["105"]["inputs"]["Text"] = "1girl,1boy,solo,"
+    workflow["105"]["inputs"]["Text"] = "1girl,1boy,solo,breasts,large_breasts,medium_breasts,cleavage,between_breasts,small_breasts,"
     
     # Pour la clé KEYWORD_PARAM, on récupère le nom du dossier parent de "ref"
     # image_path = "...\\nom_dossier\\ref\\nom_image.ext"

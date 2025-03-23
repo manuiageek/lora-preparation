@@ -308,13 +308,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--root_folder',
         type=str,
-        default='F:\-POLICENAUTS',  # Définissez ici votre chemin par défaut
+        default=r'T:\_SELECT\_READY\FAIRY TAIL 100 YEARS QUEST',  # Définissez ici votre chemin par défaut
         help="Chemin vers le dossier contenant les images"
     )
     parser.add_argument(
         '--character_file',
         type=str,
-        default='chartags\R_POLICENAUTS.csv',  # Définissez ici votre chemin par défaut
+        default=r'chartags\FAIRY TAIL 100 YEARS QUEST.csv',  # Définissez ici votre chemin par défaut
         help="Chemin vers le fichier CSV des personnages"
     )
 
