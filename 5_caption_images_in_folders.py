@@ -6,7 +6,7 @@ import requests
 # ---------------------------
 # Paramètres de l'API ComfyUI
 # ---------------------------
-API_URL = "http://127.0.0.1:8188/prompt"  # Vérifie que l'endpoint est correct
+API_URL = "http://127.0.0.1:8187/prompt"  # Vérifie que l'endpoint est correct
 HEADERS = {"Content-Type": "application/json"}
 WORKFLOW_FILE = "CAPTION_API.json"  # Chemin vers le fichier JSON du workflow
 

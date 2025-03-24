@@ -4,10 +4,10 @@ import sys
 
 # Lire les paramètres à partir du fichier automate_5-3.txt
 try:
-    with open("automate_5-3.txt", "r", encoding='utf-8') as file:
+    with open("automate_6-3.txt", "r", encoding='utf-8') as file:
         lines = [line.strip() for line in file if line.strip()]
 except FileNotFoundError:
-    print("Erreur : Le fichier 'automate_5-3.txt' n'existe pas.")
+    print("Erreur : Le fichier 'automate_6-3.txt' n'existe pas.")
     sys.exit(1)
 
 # Boucle pour traiter chaque ligne du fichier
@@ -21,8 +21,8 @@ for line in lines:
     root_folder = parts[0]
     character_file = parts[1]
 
-    # Exécuter le script 5_TF_character_categorisation.py
-    script1 = "5_TF_character_categorisation.py"
+    # Exécuter le script 6_TF_character_categorisation.py
+    script1 = "6_TF_character_categorisation.py"
     try:
         subprocess.run(
             ["python", script1, "--root_folder", root_folder, "--character_file", character_file],
