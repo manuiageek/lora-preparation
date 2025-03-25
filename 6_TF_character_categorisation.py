@@ -325,8 +325,8 @@ if __name__ == '__main__':
         'THRESHOLD': 0.55,
         'MATCH_THRESHOLD': 0.55,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
-        'NUM_CORES': 16,       # Nombre de cœurs CPU à utiliser
-        'BATCH_SIZE': 64,      # Taille du batch pour le traitement des images
+        'NUM_CORES': 24,       # Nombre de cœurs CPU à utiliser
+        'BATCH_SIZE': 50,      # Taille du batch pour le traitement des images
         'MAX_MEMORY_BYTES': 24 * 1024 ** 3  # Limite de RAM allouée en bytes (24 Go)
     }
 

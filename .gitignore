@@ -36,4 +36,6 @@ images/
 # Ignorer les fichiers venv
 venv/
 
+# Ingorer les fichiers 
 TODO.txt
+open_configkey.txt

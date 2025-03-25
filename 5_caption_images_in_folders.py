@@ -2,18 +2,20 @@ import os
 import json
 import copy
 import requests
+from openai import OpenAI  # Importation de la librairie OpenAI
 
 # ---------------------------
 # Paramètres de l'API ComfyUI
 # ---------------------------
 API_URL = "http://127.0.0.1:8187/prompt"  # Vérifie que l'endpoint est correct
 HEADERS = {"Content-Type": "application/json"}
-WORKFLOW_FILE = "CAPTION_API.json"  # Chemin vers le fichier JSON du workflow
+WORKFLOW_FILE = "CAPTION_API.json"      # Chemin vers le fichier JSON du workflow
 
 # ---------------------------
-# Extensions autorisées
+# Extensions autorisées pour les images
 # ---------------------------
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.tif', '.heic'}
+ALLOWED_TXT_EXTENSIONS = {'.txt'}
 
 def list_images_from_ref_dirs(base_directory):
     """
@@ -34,6 +36,25 @@ def list_images_from_ref_dirs(base_directory):
                             image_paths.append(file_path)
     return image_paths
 
+def list_txt_files_from_ref_dirs(base_directory):
+    """
+    Parcourt le répertoire de base et recherche, pour chaque sous-dossier,
+    le dossier 'ref' dans lequel il y a des fichiers .txt générés.
+    """
+    txt_paths = []
+    for entry in os.listdir(base_directory):
+        entry_path = os.path.join(base_directory, entry)
+        if os.path.isdir(entry_path):
+            ref_dir = os.path.join(entry_path, "ref")
+            if os.path.isdir(ref_dir):
+                for filename in os.listdir(ref_dir):
+                    file_path = os.path.join(ref_dir, filename)
+                    if os.path.isfile(file_path):
+                        _, ext = os.path.splitext(filename)
+                        if ext.lower() in ALLOWED_TXT_EXTENSIONS:
+                            txt_paths.append(file_path)
+    return txt_paths
+
 def call_api_for_image(image_path, workflow_template):
     """
     Pour une image donnée, la fonction crée une copie du workflow,
@@ -46,13 +67,9 @@ def call_api_for_image(image_path, workflow_template):
     
     # Modification des paramètres du workflow :
     # Exemple de TAGS_EXCLUDED_PARAM (peut rester en dur)
-    workflow["105"]["inputs"]["Text"] = "1girl,1boy,solo,breasts,large_breasts,medium_breasts,cleavage,between_breasts,small_breasts,"
+    workflow["105"]["inputs"]["Text"] = "1girl,1boy,solo,breasts,large_breasts,medium_breasts,cleavage,between_breasts,small_breasts,looking_at_viewer,"
     
     # Pour la clé KEYWORD_PARAM, on récupère le nom du dossier parent de "ref"
-    # image_path = "...\\nom_dossier\\ref\\nom_image.ext"
-    # os.path.dirname(image_path) retourne le chemin "...\\nom_dossier\\ref"
-    # os.path.dirname(os.path.dirname(image_path)) retourne le chemin "...\\nom_dossier"
-    # os.path.basename(...) récupère "nom_dossier"
     folder_name = os.path.basename(os.path.dirname(os.path.dirname(image_path)))
     workflow["67"]["inputs"]["Text"] = folder_name
     
@@ -71,10 +88,14 @@ def call_api_for_image(image_path, workflow_template):
         print(f"Erreur lors de l'appel pour l'image {image_path}: {e}")
         return None
 
-if __name__ == "__main__":
-    # Demande à l'utilisateur le dossier de base où réaliser le traitement des images
+def process_images():
+    """
+    Traite les images en parcourant le dossier de base pour trouver les images dans les sous-dossiers 'ref'.
+    Pour chaque image, appelle l'API ComfyUI et affiche la réponse.
+    Renvoie le dossier de base utilisé pour pouvoir le réutiliser ensuite.
+    """
     while True:
-        BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base : ").strip()
+        BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base pour le traitement des images : ").strip()
         if os.path.isdir(BASE_DIR):
             break
         else:
@@ -97,6 +118,79 @@ if __name__ == "__main__":
         print("Traitement de l'image :", image)
         result = call_api_for_image(image, workflow_template)
         if result is not None:
-            print("Réponse de l'API :", result)
+            print("Réponse de l'API ComfyUI :", result)
         else:
             print("Aucune réponse obtenue pour cette image.")
+    
+    # On retourne le dossier de base pour le traitement ultérieur des fichiers .txt
+    return BASE_DIR
+
+def process_caption_txt_with_openai(base_directory):
+    """
+    Pour chaque fichier .txt généré dans les dossiers 'ref' du dossier de base,
+    lit son contenu, l'envoie à l'API OpenAI avec un pré-prompt précis, puis
+    affiche la réponse qui est renvoyée et stocke le résultat dans 'user_keywords'.
+    """
+    # Charger la clé API depuis le fichier 'open_configkey.txt'
+    try:
+        with open("open_configkey.txt", "r", encoding="utf-8") as key_file:
+            openaikey = key_file.read().strip()
+    except Exception as e:
+        print(f"Erreur lors de la lecture du fichier 'open_configkey.txt': {e}")
+        return
+
+    # Création du client OpenAI
+    client = OpenAI(api_key=openaikey)
+
+    # Pré-prompt imposé
+    pre_prompt = (
+        "I will provide you with a list of keywords. Reorder the keywords according to these rules:\n"
+        "1) The first keyword remains in its original position.\n"
+        "2) Next, include all keywords that describe physical attributes (e.g., eyes, hair).\n"
+        "3) Then, include the keywords related to clothing.\n"
+        "4) Finally, append all remaining keywords, including behavioral descriptors, at the end.\n"
+        "Ensure that no keywords are omitted and that the output maintains the exact same format "
+        "as the input without any additional explanations."
+    )
+
+    # Récupération de tous les fichiers .txt dans les dossiers 'ref'
+    txt_files = list_txt_files_from_ref_dirs(base_directory)
+    print("Nombre de fichiers .txt trouvés :", len(txt_files))
+    
+    # Pour chaque fichier texte, lire le contenu et appeler l'API OpenAI
+    for txt_file in txt_files:
+        try:
+            with open(txt_file, "r", encoding="utf-8") as f:
+                user_keywords = f.read().strip()
+        except Exception as e:
+            print(f"Erreur lors de la lecture du fichier {txt_file}: {e}")
+            continue
+
+        print(f"\nTraitement du fichier : {txt_file}")
+        print("Contenu du fichier (user_keywords) :", user_keywords)
+        try:
+            # Appel à l'API Chat de OpenAI
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": pre_prompt},
+                    {"role": "user", "content": user_keywords}
+                ]
+            )
+            # Extraire la réponse texte
+            openai_response = completion.choices[0].message.content
+            # La réponse est désormais assignée à user_keywords pour réutilisation éventuelle
+            user_keywords = openai_response
+            print("Réponse de l'API OpenAI :", user_keywords)
+        except Exception as e:
+            print(f"Une erreur s'est produite lors de l'appel à l'API OpenAI pour le fichier {txt_file} : {str(e)}")
+
+def main():
+    # Traiter les images avec l'API ComfyUI et récupérer le dossier de base utilisé
+    base_dir = process_images()
+    
+    # Une fois les fichiers .txt générés dans les dossiers 'ref', on les envoie à OpenAI
+    process_caption_txt_with_openai(base_dir)
+
+if __name__ == "__main__":
+    main()
