@@ -67,7 +67,7 @@ def call_api_for_image(image_path, workflow_template):
     
     # Modification des paramètres du workflow :
     # Exemple de TAGS_EXCLUDED_PARAM (peut rester en dur)
-    workflow["105"]["inputs"]["Text"] = "1girl,1boy,solo,breasts,large_breasts,medium_breasts,cleavage,between_breasts,small_breasts,looking_at_viewer,"
+    workflow["105"]["inputs"]["Text"] = "1girl,1boy,solo,breasts,large_breasts,medium_breasts,cleavage,between_breasts,small_breasts,anime_coloring,looking_at_viewer,"
     
     # Pour la clé KEYWORD_PARAM, on récupère le nom du dossier parent de "ref"
     folder_name = os.path.basename(os.path.dirname(os.path.dirname(image_path)))
@@ -87,6 +87,26 @@ def call_api_for_image(image_path, workflow_template):
     except Exception as e:
         print(f"Erreur lors de l'appel pour l'image {image_path}: {e}")
         return None
+
+def parse_keywords(keywords_string):
+    """
+    Transforme une chaîne de mots-clés séparés par des virgules en un format recodé :
+    '1er keyword':['keyword1','keyword2',...],
+    où le premier mot-clé est utilisé comme clé et le reste comme liste de valeurs.
+    """
+    # Séparation par la virgule et suppression des espaces superflus
+    keywords = [kw.strip() for kw in keywords_string.split(",") if kw.strip()]
+    
+    if not keywords:
+        return ""
+    
+    premier_keyword = keywords[0]
+    autres = keywords[1:]
+    # Construction de la chaîne selon le format souhaité
+    # Exemple : '1er mot':['mot2','mot3',...],
+    autres_format = ",".join(f"'{mot}'" for mot in autres)
+    output_line = f"'{premier_keyword}':[{autres_format}],\n"
+    return output_line
 
 def process_images():
     """
@@ -129,7 +149,10 @@ def process_caption_txt_with_openai(base_directory):
     """
     Pour chaque fichier .txt généré dans les dossiers 'ref' du dossier de base,
     lit son contenu, l'envoie à l'API OpenAI avec un pré-prompt précis, puis
-    affiche la réponse qui est renvoyée et stocke le résultat dans 'user_keywords'.
+    reformule le résultat sous la forme :
+        '1er keyword':['keyword1','keyword2',...],
+    et écrit ce résultat dans un fichier CSV dont le nom est celui du dossier de base.
+    Le fichier est ouvert en mode écriture.
     """
     # Charger la clé API depuis le fichier 'open_configkey.txt'
     try:
@@ -153,11 +176,18 @@ def process_caption_txt_with_openai(base_directory):
         "as the input without any additional explanations."
     )
 
-    # Récupération de tous les fichiers .txt dans les dossiers 'ref'
-    txt_files = list_txt_files_from_ref_dirs(base_directory)
-    print("Nombre de fichiers .txt trouvés :", len(txt_files))
+    # Nom du répertoire de base (ajout de l'extension .csv)
+    base_name = os.path.basename(os.path.normpath(base_directory))
+    output_file = os.path.join(base_directory, base_name + ".csv")
     
-    # Pour chaque fichier texte, lire le contenu et appeler l'API OpenAI
+    try:
+        out_f = open(output_file, "w", encoding="utf-8")
+    except Exception as e:
+        print(f"Erreur lors de l'ouverture du fichier {output_file} : {e}")
+        return
+
+    # Pour chaque fichier texte, lire le contenu et appeler l'API OpenAI, puis reformuler le résultat
+    txt_files = list_txt_files_from_ref_dirs(base_directory)    
     for txt_file in txt_files:
         try:
             with open(txt_file, "r", encoding="utf-8") as f:
@@ -166,8 +196,7 @@ def process_caption_txt_with_openai(base_directory):
             print(f"Erreur lors de la lecture du fichier {txt_file}: {e}")
             continue
 
-        print(f"\nTraitement du fichier : {txt_file}")
-        print("Contenu du fichier (user_keywords) :", user_keywords)
+        print(f"\nTraitement openai du fichier : {txt_file}")
         try:
             # Appel à l'API Chat de OpenAI
             completion = client.chat.completions.create(
@@ -179,17 +208,24 @@ def process_caption_txt_with_openai(base_directory):
             )
             # Extraire la réponse texte
             openai_response = completion.choices[0].message.content
-            # La réponse est désormais assignée à user_keywords pour réutilisation éventuelle
-            user_keywords = openai_response
-            print("Réponse de l'API OpenAI :", user_keywords)
         except Exception as e:
             print(f"Une erreur s'est produite lors de l'appel à l'API OpenAI pour le fichier {txt_file} : {str(e)}")
+            continue
+
+        # Reformater la réponse obtenue au format '1er keyword':['keyword1','keyword2',...],
+        formatted_output = parse_keywords(openai_response)
+        if formatted_output:
+            try:
+                out_f.write(formatted_output)
+            except Exception as e:
+                print(f"Erreur lors de l'écriture dans le fichier {output_file} : {e}")
+    out_f.close()
 
 def main():
     # Traiter les images avec l'API ComfyUI et récupérer le dossier de base utilisé
     base_dir = process_images()
     
-    # Une fois les fichiers .txt générés dans les dossiers 'ref', on les envoie à OpenAI
+    # Une fois les fichiers .txt générés dans les dossiers 'ref', on les envoie à OpenAI et écrit le résultat dans le fichier CSV
     process_caption_txt_with_openai(base_dir)
 
 if __name__ == "__main__":
