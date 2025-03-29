@@ -1,4 +1,25 @@
 import puppeteer from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
+import fetch from 'node-fetch';  // installer avec "npm install node-fetch" si nécessaire
+
+// Fonction utilitaire pour télécharger un fichier depuis une URL vers un chemin local
+async function downloadImage(url, filePath) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Erreur lors du téléchargement ${url} - ${res.statusText}`);
+  }
+  const fileStream = fs.createWriteStream(filePath);
+  return new Promise((resolve, reject) => {
+    res.body.pipe(fileStream);
+    res.body.on("error", (err) => {
+      reject(err);
+    });
+    fileStream.on("finish", function () {
+      resolve();
+    });
+  });
+}
 
 (async () => {
   // URL de la page listant les personnages de Cat's Eye
@@ -14,15 +35,14 @@ import puppeteer from 'puppeteer';
   );
 
   try {
-    // Charge la page et attend les éléments contenant les noms de personnages
+    // Accès à la page et attente des éléments contenant les noms de personnages
     await page.goto(url, { waitUntil: 'networkidle2' });
     await page.waitForSelector('h3.h3_character_name', { timeout: 10000 });
     console.log("La page des personnages est chargée, début de l'extraction des liens...");
 
-    // Extraction de tous les liens des pages de détails des personnages
+    // Extraction de tous les liens vers les pages de détails des personnages
     const characterLinks = await page.evaluate(() => {
       const elements = Array.from(document.querySelectorAll('h3.h3_character_name'));
-      // On récupère le href du parent (la balise <a>)
       return elements.map(el => el.parentElement ? el.parentElement.href : null)
                      .filter(link => link !== null);
     });
@@ -37,13 +57,12 @@ import puppeteer from 'puppeteer';
 
       // Navigation vers la page de détail du personnage
       await page.goto(link, { waitUntil: 'networkidle2' });
-      // Attendre que l'image en haute résolution soit chargée
+      // Attente de l'image en haute résolution
       await page.waitForSelector('img.portrait-225x350', { timeout: 10000 });
 
-      // Extrait le nom depuis l'URL : le dernier segment de l'URL (ici "Ai_Kisugi")
+      // Extraction du nom (dernier segment de l'URL)
       const urlName = link.split('/').pop();
-
-      // Extraction facultative des autres détails depuis la page du personnage.
+      // Extraction de l'URL de l'image depuis la page du personnage
       const details = await page.evaluate(() => {
         const imgElement = document.querySelector('img.portrait-225x350');
         const imageUrl = imgElement 
@@ -52,13 +71,38 @@ import puppeteer from 'puppeteer';
         return { imageUrl };
       });
 
-      // Ici, on remplace "name" par le segment de l'URL.
       const name = urlName;
       console.log("Nom extrait :", name);
-      console.log("Détails extraits :", details);
-      results.push({ url: link, name, ...details });
+      console.log("URL de l'image :", details.imageUrl);
 
-      // Retour à la page principale pour le personnage suivant
+      // Création du dossier pour ce personnage dans "images"
+      const dirPath = path.join('images', name);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+        console.log(`Répertoire créé : ${dirPath}`);
+      }
+      // Création du sous-dossier "ref"
+      const refDir = path.join(dirPath, 'ref');
+      if (!fs.existsSync(refDir)) {
+        fs.mkdirSync(refDir, { recursive: true });
+        console.log(`Sous-dossier 'ref' créé : ${refDir}`);
+      }
+
+      // Détermination du nom de fichier à partir de l'URL de l'image (supprime d'éventuels paramètres)
+      const fileName = path.basename(details.imageUrl.split('?')[0]);
+      const filePath = path.join(refDir, fileName);
+
+      try {
+        console.log(`Téléchargement de l'image vers ${filePath}`);
+        await downloadImage(details.imageUrl, filePath);
+        console.log("Téléchargement réussi !");
+      } catch (downloadError) {
+        console.error("Erreur lors du téléchargement de l'image :", downloadError);
+      }
+
+      results.push({ url: link, name, imageUrl: details.imageUrl });
+
+      // Retour à la page principale pour continuer
       await page.goto(url, { waitUntil: 'networkidle2' });
       await page.waitForSelector('h3.h3_character_name', { timeout: 10000 });
     }
