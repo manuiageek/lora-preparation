@@ -35,6 +35,7 @@ models/
 
 # Ignorer les fichiers images
 images/
+!images/.gitkeep
 
 # Ignorer les fichiers venv
 venv/
