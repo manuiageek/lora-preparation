@@ -33,8 +33,10 @@ build/
 # Ignorer les fichiers models
 models/
 
-# Ignorer les fichiers images
-images/
+# Ignorer le dossier images et tout son contenu
+images/*
+
+# Ne pas ignorer le fichier .gitkeep dans le dossier images
 !images/.gitkeep
 
 # Ignorer les fichiers venv
