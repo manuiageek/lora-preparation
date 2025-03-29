@@ -39,3 +39,4 @@ venv/
 # Ingorer les fichiers 
 TODO.txt
 open_configkey.txt
+image_hashes_cache.pkl

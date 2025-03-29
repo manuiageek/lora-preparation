@@ -17,6 +17,47 @@ WORKFLOW_FILE = "CAPTION_API.json"      # Chemin vers le fichier JSON du workflo
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.tif', '.heic'}
 ALLOWED_TXT_EXTENSIONS = {'.txt'}
 
+def call_llm(user_keywords, openai_client):
+    """
+    Appelle Ollama pour obtenir une réponse LLM. Si l'appel échoue,
+    bascule sur l'API OpenAI.
+    """
+    # Pré-prompt imposé
+    pre_prompt = (
+        "I will provide you with a list of keywords. Reorder the keywords according to these rules:\n"
+        "1) The first keyword remains in its original position.\n"
+        "2) Next, include all keywords that describe physical attributes (e.g., eyes, hair colors).\n"
+        "3) Then, include the keywords related to clothing.\n"
+        "4) Finally, append all remaining keywords, including behavioral descriptors, at the end.\n"
+        "Please don't modify any keyword, leave them as they are.\n"
+        "Ensure that no keywords are omitted and that the output maintains the exact same format "
+        "as the input without any additional explanations. only one line output."
+    )
+
+    ollama_url = "http://192.168.178.58:11434/v1/chat/completions"
+    payload = {
+        "model": "qwen2.5:7b-instruct-q5_K_M",
+        "messages": [
+            {"role": "system", "content": pre_prompt},
+            {"role": "user", "content": user_keywords}
+        ]
+    }
+    try:
+        response = requests.post(ollama_url, json=payload, timeout=200)
+        response.raise_for_status()
+        data = response.json()
+        return data['choices'][0]['message']['content']
+    except Exception as e:
+        print("Erreur lors de l'appel à Ollama, utilisation de OpenAI :", e)
+        completion = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": pre_prompt},
+                {"role": "user", "content": user_keywords}
+            ]
+        )
+        return completion.choices[0].message.content
+
 def list_images_from_ref_dirs(base_directory):
     """
     Parcourt le répertoire de base et recherche, pour chaque sous-dossier,
@@ -165,17 +206,6 @@ def process_caption_txt_with_openai(base_directory):
     # Création du client OpenAI
     client = OpenAI(api_key=openaikey)
 
-    # Pré-prompt imposé
-    pre_prompt = (
-        "I will provide you with a list of keywords. Reorder the keywords according to these rules:\n"
-        "1) The first keyword remains in its original position.\n"
-        "2) Next, include all keywords that describe physical attributes (e.g., eyes, hair).\n"
-        "3) Then, include the keywords related to clothing.\n"
-        "4) Finally, append all remaining keywords, including behavioral descriptors, at the end.\n"
-        "Ensure that no keywords are omitted and that the output maintains the exact same format "
-        "as the input without any additional explanations."
-    )
-
     # Nom du répertoire de base (ajout de l'extension .csv)
     base_name = os.path.basename(os.path.normpath(base_directory))
     output_file = os.path.join(base_directory, base_name + ".csv")
@@ -196,24 +226,15 @@ def process_caption_txt_with_openai(base_directory):
             print(f"Erreur lors de la lecture du fichier {txt_file}: {e}")
             continue
 
-        print(f"\nTraitement openai du fichier : {txt_file}")
+ 
+        print(f"\nTraitement du fichier avec LLM : {txt_file}")
         try:
-            # Appel à l'API Chat de OpenAI
-            completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": pre_prompt},
-                    {"role": "user", "content": user_keywords}
-                ]
-            )
-            # Extraire la réponse texte
-            openai_response = completion.choices[0].message.content
+            response_text = call_llm(user_keywords, client)
         except Exception as e:
-            print(f"Une erreur s'est produite lors de l'appel à l'API OpenAI pour le fichier {txt_file} : {str(e)}")
+            print(f"Une erreur s'est produite lors de l'appel à l'API LLM pour le fichier {txt_file} : {str(e)}")
             continue
 
-        # Reformater la réponse obtenue au format '1er keyword':['keyword1','keyword2',...],
-        formatted_output = parse_keywords(openai_response)
+        formatted_output = parse_keywords(response_text)
         if formatted_output:
             try:
                 out_f.write(formatted_output)
