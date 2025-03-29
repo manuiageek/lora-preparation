@@ -27,6 +27,9 @@ build/
 # Ignorer les fichiers de tests locaux
 .coverage
 
+# Ignorer le dossier 
+/node_modules/
+
 # Ignorer les fichiers models
 models/
 
@@ -40,3 +43,4 @@ venv/
 TODO.txt
 open_configkey.txt
 image_hashes_cache.pkl
+
