@@ -27,10 +27,10 @@ def call_llm(user_keywords, openai_client):
         "I will provide you with a list of keywords. Reorder the keywords according to these rules:\n"
         "1) The first keyword remains in its original position.\n"
         "2) Next, include all keywords that describe physical attributes (e.g., eyes, hair colors).\n"
-        "3) Then, include the keywords related to clothing.\n"
-        "4) Finally, append all remaining keywords, including behavioral descriptors, at the end.\n"
+        "3) Then, delete the keywords related to clothing.\n"
+        "4) Finally, delete all remaining keywords, including behavioral descriptors, at the end.\n"
         "Please don't modify any keyword, leave them as they are.\n"
-        "Ensure that no keywords are omitted and that the output maintains the exact same format "
+        "Ensure that the output maintains the exact same format "
         "as the input without any additional explanations. only one line output."
     )
 

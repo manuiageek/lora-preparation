@@ -22,8 +22,8 @@ async function downloadImage(url, filePath) {
 }
 
 (async () => {
-  // URL de la page listant les personnages de Cat's Eye
-  const url = 'https://myanimelist.net/anime/2043/Cats_Eye/characters';
+  // URL de la page listant les personnages
+  const url = 'https://myanimelist.net/anime/49785/Fairy_Tail__100-nen_Quest/characters';
 
   // Lance le navigateur en mode headless
   const browser = await puppeteer.launch({ headless: true });
@@ -55,52 +55,71 @@ async function downloadImage(url, filePath) {
       const link = characterLinks[i];
       console.log(`Traitement du personnage ${i + 1} : ${link}`);
 
-      // Navigation vers la page de détail du personnage
-      await page.goto(link, { waitUntil: 'networkidle2' });
-      // Attente de l'image en haute résolution
-      await page.waitForSelector('img.portrait-225x350', { timeout: 10000 });
-
       // Extraction du nom (dernier segment de l'URL)
       const urlName = link.split('/').pop();
-      // Extraction de l'URL de l'image depuis la page du personnage
-      const details = await page.evaluate(() => {
-        const imgElement = document.querySelector('img.portrait-225x350');
-        const imageUrl = imgElement 
-                         ? (imgElement.getAttribute('data-src') || imgElement.getAttribute('src') || '')
-                         : '';
-        return { imageUrl };
-      });
-
       const name = urlName;
-      console.log("Nom extrait :", name);
-      console.log("URL de l'image :", details.imageUrl);
+
+      // Vérification : si le dossier du personnage existe déjà, on passe ce personnage
+      const dirPath = path.join('images', name);
+      if (fs.existsSync(dirPath)) {
+        console.log(`Le personnage ${name} a déjà été traité. Passage au suivant.`);
+        continue;
+      }
+
+      // Navigation vers la page de détail du personnage
+      await page.goto(link, { waitUntil: 'networkidle2' });
+
+      let imageAvailable = true;
+      // Vérifie s'il y a une image (timeout augmenté à 30000ms)
+      try {
+        await page.waitForSelector('img.portrait-225x350', { timeout: 30000 });
+      } catch (imgError) {
+        console.log(`Image non disponible pour ${name}.`);
+        imageAvailable = false;
+      }
 
       // Création du dossier pour ce personnage dans "images"
-      const dirPath = path.join('images', name);
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-        console.log(`Répertoire créé : ${dirPath}`);
-      }
+      fs.mkdirSync(dirPath, { recursive: true });
+      console.log(`Répertoire créé : ${dirPath}`);
       // Création du sous-dossier "ref"
       const refDir = path.join(dirPath, 'ref');
-      if (!fs.existsSync(refDir)) {
-        fs.mkdirSync(refDir, { recursive: true });
-        console.log(`Sous-dossier 'ref' créé : ${refDir}`);
+      fs.mkdirSync(refDir, { recursive: true });
+      console.log(`Sous-dossier 'ref' créé : ${refDir}`);
+
+      let imageUrl = '';
+      // Si l'image est disponible, extraire son URL
+      if (imageAvailable) {
+        const details = await page.evaluate(() => {
+          const imgElement = document.querySelector('img.portrait-225x350');
+          const imageUrl = imgElement 
+                           ? (imgElement.getAttribute('data-src') || imgElement.getAttribute('src') || '')
+                           : '';
+          return { imageUrl };
+        });
+        imageUrl = details.imageUrl;
+        console.log("Nom extrait :", name);
+        console.log("URL de l'image :", imageUrl);
+
+        if (imageUrl) {
+          // Détermination du nom de fichier à partir de l'URL de l'image (suppression de potentiels paramètres)
+          const fileName = path.basename(imageUrl.split('?')[0]);
+          const filePath = path.join(refDir, fileName);
+  
+          try {
+            console.log(`Téléchargement de l'image vers ${filePath}`);
+            await downloadImage(imageUrl, filePath);
+            console.log("Téléchargement réussi !");
+          } catch (downloadError) {
+            console.error("Erreur lors du téléchargement de l'image :", downloadError);
+          }
+        } else {
+          console.log(`Aucune URL d'image trouvée pour ${name}.`);
+        }
+      } else {
+        console.log(`Aucune image à télécharger pour ${name}.`);
       }
 
-      // Détermination du nom de fichier à partir de l'URL de l'image (supprime d'éventuels paramètres)
-      const fileName = path.basename(details.imageUrl.split('?')[0]);
-      const filePath = path.join(refDir, fileName);
-
-      try {
-        console.log(`Téléchargement de l'image vers ${filePath}`);
-        await downloadImage(details.imageUrl, filePath);
-        console.log("Téléchargement réussi !");
-      } catch (downloadError) {
-        console.error("Erreur lors du téléchargement de l'image :", downloadError);
-      }
-
-      results.push({ url: link, name, imageUrl: details.imageUrl });
+      results.push({ url: link, name, imageUrl: imageUrl || null });
 
       // Retour à la page principale pour continuer
       await page.goto(url, { waitUntil: 'networkidle2' });
