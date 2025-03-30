@@ -23,7 +23,7 @@ async function downloadImage(url, filePath) {
 
 (async () => {
   // URL de la page listant les personnages
-  const url = 'https://myanimelist.net/anime/49785/Fairy_Tail__100-nen_Quest/characters';
+  const url = 'https://myanimelist.net/anime/53802/25-jigen_no_Ririsa/characters';
 
   // Lance le navigateur en mode headless
   const browser = await puppeteer.launch({ headless: true });

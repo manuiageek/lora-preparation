@@ -80,8 +80,9 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
 
     image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp')
     image_paths = []
+    # Utilisation de glob récursif pour récupérer les images dans tous les sous-dossiers
     for extension in image_extensions:
-        image_paths.extend(glob.glob(os.path.join(subfolder_path, extension)))
+        image_paths.extend(glob.glob(os.path.join(subfolder_path, "**", extension), recursive=True))
 
     if not image_paths:
         print(f"Aucune image trouvée dans le dossier {subfolder_name}.")
@@ -288,7 +289,7 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
     print(f"Le dossier '{subfolder_name}' a été traité")
 
 def process_all_subfolders(root_folder, characters, model, tags_dict, params):
-    # Fonction principale pour traiter tous les sous-dossiers
+    # Fonction principale pour traiter tous les sous-dossiers immédiats du dossier racine
     subfolders = [f.path for f in os.scandir(root_folder) if f.is_dir()]
     if not subfolders:
         print(f"Aucun sous-dossier trouvé dans le dossier {root_folder}")
@@ -322,12 +323,12 @@ if __name__ == '__main__':
 
     # Définir les constantes et les paramètres
     params = {
-        'THRESHOLD': 0.55,
-        'MATCH_THRESHOLD': 0.55,
+        'THRESHOLD': 0.52,
+        'MATCH_THRESHOLD': 0.42,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
         'NUM_CORES': 24,       # Nombre de cœurs CPU à utiliser
-        'BATCH_SIZE': 50,      # Taille du batch pour le traitement des images
-        'MAX_MEMORY_BYTES': 24 * 1024 ** 3  # Limite de RAM allouée en bytes (24 Go)
+        'BATCH_SIZE': 64,      # Taille du batch pour le traitement des images
+        'MAX_MEMORY_BYTES': 32 * 1024 ** 3  # Limite de RAM allouée en bytes (32 Go)
     }
 
     # Activer la précision mixte
@@ -385,7 +386,7 @@ if __name__ == '__main__':
     # Convertir la liste des tags en un dictionnaire pour un accès plus rapide
     tags_dict = {i: tag for i, tag in enumerate(tags)}
 
-    # Appeler la fonction pour traiter tous les sous-dossiers
+    # Appeler la fonction pour traiter tous les sous-dossiers immédiats
     process_all_subfolders(root_folder, characters, model, tags_dict, params)
 
     print(f"Traitement terminé le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

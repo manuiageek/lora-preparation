@@ -28,7 +28,7 @@ def call_llm(user_keywords, openai_client):
         "1) The first keyword remains in its original position.\n"
         "2) Next, include all keywords that describe physical attributes (e.g., eyes, hair colors).\n"
         "3) Then, include the keywords related to clothing.\n"
-        "4) Finally, include all remaining keywords, including behavioral descriptors (e.g. own_hands_together), at the end.\n"
+        "4) Finally, exclude all remaining keywords about behavioral description (e.g. own_hands_together).\n"
         "Please don't modify any keyword, leave them as they are.\n"
         "Ensure that the output maintains the exact same format "
         "as the input without any additional explanations. only one line output."
@@ -167,12 +167,19 @@ def process_images():
     Pour chaque image, appelle l'API ComfyUI et affiche la réponse.
     Renvoie le dossier de base utilisé pour pouvoir le réutiliser ensuite.
     """
-    while True:
-        BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base pour le traitement des images : ").strip()
-        if os.path.isdir(BASE_DIR):
-            break
-        else:
-            print("Le chemin saisi n'est pas un dossier valide. Veuillez réessayer.")
+    # Définir le dossier par défaut "images" (dans le même répertoire que le script)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_base_dir = os.path.join(script_dir, "images")
+    
+    BASE_DIR = input(f"Veuillez entrer le chemin complet du dossier de base pour le traitement des images (appuyez sur Entrée pour utiliser '{default_base_dir}') : ").strip()
+    if not BASE_DIR:
+        BASE_DIR = default_base_dir
+
+    while not os.path.isdir(BASE_DIR):
+        print("Le chemin saisi n'est pas un dossier valide. Veuillez réessayer.")
+        BASE_DIR = input(f"Veuillez entrer le chemin complet du dossier de base (ou appuyez sur Entrée pour utiliser '{default_base_dir}') : ").strip()
+        if not BASE_DIR:
+            BASE_DIR = default_base_dir
 
     # Charger le template du workflow une seule fois
     try:
@@ -238,7 +245,6 @@ def process_caption_txt_with_openai(base_directory):
             print(f"Erreur lors de la lecture du fichier {txt_file}: {e}")
             continue
 
- 
         print(f"\nTraitement du fichier avec LLM : {txt_file}")
         try:
             response_text = call_llm(user_keywords, client)
