@@ -23,7 +23,7 @@ async function downloadImage(url, filePath) {
 
 (async () => {
   // URL de la page listant les personnages
-  const url = 'https://myanimelist.net/anime/53802/25-jigen_no_Ririsa/characters';
+  const url = 'https://myanimelist.net/anime/195/Onegai%E2%98%86Teacher/characters';
 
   // Lance le navigateur en mode headless
   const browser = await puppeteer.launch({ headless: true });

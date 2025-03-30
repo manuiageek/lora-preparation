@@ -1,13 +1,15 @@
 import os
 import json
 import copy
+import sys
+import time
 import requests
 from openai import OpenAI  # Importation de la librairie OpenAI
 
 # ---------------------------
 # Paramètres de l'API ComfyUI
 # ---------------------------
-API_URL = "http://127.0.0.1:8188/prompt"  # Vérifie que l'endpoint est correct
+API_URL = "http://127.0.0.1:8187/prompt"  # Vérifie que l'endpoint est correct
 HEADERS = {"Content-Type": "application/json"}
 WORKFLOW_FILE = "CAPTION_API.json"      # Chemin vers le fichier JSON du workflow
 
@@ -19,51 +21,48 @@ ALLOWED_TXT_EXTENSIONS = {'.txt'}
 
 def call_llm(user_keywords, openai_client):
     """
-    Appelle Ollama pour obtenir une réponse LLM. Si l'appel échoue,
-    bascule sur l'API OpenAI.
+    Appelle l'API LLM d'OpenAI en utilisant un mécanisme de retry.
+    En cas d'échec après plusieurs tentatives, le script s'arrête avec un message d'erreur.
     """
-    # Pré-prompt imposé
     pre_prompt = (
         "I will provide you with a list of keywords. Reorder the keywords according to these rules:\n"
         "1) The first keyword remains in its original position.\n"
         "2) Next, include all keywords that describe physical attributes (e.g., eyes, hair colors).\n"
-        "3) Then, include the keywords related to clothing.\n"
+        "3) Then, exclude the keywords related to clothing.\n"
         "4) Finally, exclude all remaining keywords about behavioral description (e.g. own_hands_together).\n"
         "Please don't modify any keyword, leave them as they are.\n"
         "Ensure that the output maintains the exact same format "
         "as the input without any additional explanations. only one line output."
     )
 
-    ollama_url = "http://192.168.178.58:11434/v1/chat/completions"
-    payload = {
-        "model": "qwen2.5:7b-instruct-q5_K_M",
-        "messages": [
-            {"role": "system", "content": pre_prompt},
-            {"role": "user", "content": user_keywords}
-        ]
-    }
-    try:
-        # Première tentative avec ChatGPT (OpenAI)
-        completion = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": pre_prompt},
-                {"role": "user", "content": user_keywords}
-            ]
-        )
-        result = completion.choices[0].message.content
-        return result
-    except Exception as e:
-        print("Erreur lors de l'appel à OpenAI :", e)
-        # try:
-            # Appel de secours avec Ollama
-            # response = requests.post(ollama_url, json=payload, timeout=200)
-            # response.raise_for_status()
-            # data = response.json()
-            # return data['choices'][0]['message']['content']
-        # except Exception as ex:
-            # print("Erreur lors de l'appel à Ollama également :", ex)
-            # raise
+    max_retries = 5         # Nombre maximum de tentatives
+    retry_delay = 5         # Délai (en secondes) entre chaque tentative
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"Tentative {attempt}/{max_retries} pour appeler OpenAI LLM...")
+            completion = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": pre_prompt},
+                    {"role": "user", "content": user_keywords}
+                ],
+                timeout=60  # Ajout d'un délai d'attente (60 sec) pour la requête
+            )
+            result = completion.choices[0].message.content
+            return result
+        except Exception as e:
+            print(f"Erreur lors de l'appel à OpenAI (tentative {attempt}/{max_retries}): {e}")
+            if attempt < max_retries:
+                print(f"Nouvelle tentative dans {retry_delay} secondes...")
+                time.sleep(retry_delay)
+            else:
+                error_message = (
+                    "\n****************************************************************\n"
+                    "ERREUR FATALE : Impossible de contacter l'API OpenAI après plusieurs tentatives.\n"
+                    "Vérifiez votre connexion internet, la validité de votre clé API, et l'état du service.\n"
+                    "****************************************************************\n"
+                )
+                sys.exit(error_message)
 
 def list_images_from_ref_dirs(base_directory):
     """
@@ -110,32 +109,25 @@ def call_api_for_image(image_path, workflow_template):
     et au nom du dossier parent du répertoire "ref", puis appelle l'API ComfyUI.
     Le JSON de réponse est renvoyé.
     """
-    # Création d'une copie du workflow pour réinitialiser l'état à chaque itération
     workflow = copy.deepcopy(workflow_template)
     
-    # Modification des paramètres du workflow :
-    # Exemple de TAGS_EXCLUDED_PARAM (peut rester en dur)
     workflow["105"]["inputs"]["Text"] = (
         "1girl,1boy,solo,breasts,large_breasts,medium_breasts,"
         "cleavage,between_breasts,small_breasts,anime_coloring,looking_at_viewer,"
         "simple_background,white_background,smile,smiling,upper_body,personal_background,"
-        "white_background,blue_sky,outdoors,blurry,sky,thumbs_up,smirk,"
+        "white_background,blue_sky,outdoors,blurry,sky,thumbs_up,smirk,closed_eyes,"
     )
     
-    # Pour la clé KEYWORD_PARAM, on récupère le nom du dossier parent de "ref"
     folder_name = os.path.basename(os.path.dirname(os.path.dirname(image_path)))
     workflow["67"]["inputs"]["Text"] = folder_name
     
-    # PATH_IMG_PARAM : on insère le chemin complet de l'image trouvée
     workflow["94"]["inputs"]["value"] = image_path
-    # PATH_PARAM : on insère le dossier "ref" de l'image 
     workflow["103"]["inputs"]["value"] = os.path.dirname(image_path)
     
-    # Préparer le payload et envoyer la requête POST
     payload = {"prompt": workflow}
     try:
         response = requests.post(API_URL, json=payload, headers=HEADERS)
-        response.raise_for_status()  # Lève une exception en cas d'erreur HTTP
+        response.raise_for_status()
         return response.json()
     except Exception as e:
         print(f"Erreur lors de l'appel pour l'image {image_path}: {e}")
@@ -147,7 +139,6 @@ def parse_keywords(keywords_string):
     '1er keyword':['keyword1','keyword2',...],
     où le premier mot-clé est utilisé comme clé et le reste comme liste de valeurs.
     """
-    # Séparation par la virgule et suppression des espaces superflus
     keywords = [kw.strip() for kw in keywords_string.split(",") if kw.strip()]
     
     if not keywords:
@@ -155,8 +146,6 @@ def parse_keywords(keywords_string):
     
     premier_keyword = keywords[0]
     autres = keywords[1:]
-    # Construction de la chaîne selon le format souhaité
-    # Exemple : '1er mot':['mot2','mot3',...],
     autres_format = ",".join(f"'{mot}'" for mot in autres)
     output_line = f"'{premier_keyword}':[{autres_format}],\n"
     return output_line
@@ -167,7 +156,6 @@ def process_images():
     Pour chaque image, appelle l'API ComfyUI et affiche la réponse.
     Renvoie le dossier de base utilisé pour pouvoir le réutiliser ensuite.
     """
-    # Définir le dossier par défaut "images" (dans le même répertoire que le script)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     default_base_dir = os.path.join(script_dir, "images")
     
@@ -181,7 +169,6 @@ def process_images():
         if not BASE_DIR:
             BASE_DIR = default_base_dir
 
-    # Charger le template du workflow une seule fois
     try:
         with open(WORKFLOW_FILE, "r", encoding="utf-8") as f:
             workflow_template = json.load(f)
@@ -189,11 +176,9 @@ def process_images():
         print(f"Erreur lors du chargement de {WORKFLOW_FILE}: {e}")
         exit(1)
 
-    # Lister les images présentes dans tous les sous-dossiers 'ref'
     images = list_images_from_ref_dirs(BASE_DIR)
     print("Nombre d'images trouvées :", len(images))
     
-    # Pour chaque image, appeler l'API et afficher le retour
     for image in images:
         print("Traitement de l'image :", image)
         result = call_api_for_image(image, workflow_template)
@@ -202,7 +187,6 @@ def process_images():
         else:
             print("Aucune réponse obtenue pour cette image.")
     
-    # On retourne le dossier de base pour le traitement ultérieur des fichiers .txt
     return BASE_DIR
 
 def process_caption_txt_with_openai(base_directory):
@@ -212,9 +196,7 @@ def process_caption_txt_with_openai(base_directory):
     reformule le résultat sous la forme :
         '1er keyword':['keyword1','keyword2',...],
     et écrit ce résultat dans un fichier CSV dont le nom est celui du dossier de base.
-    Le fichier est ouvert en mode écriture.
     """
-    # Charger la clé API depuis le fichier 'open_configkey.txt'
     try:
         with open("open_configkey.txt", "r", encoding="utf-8") as key_file:
             openaikey = key_file.read().strip()
@@ -222,10 +204,8 @@ def process_caption_txt_with_openai(base_directory):
         print(f"Erreur lors de la lecture du fichier 'open_configkey.txt': {e}")
         return
 
-    # Création du client OpenAI
     client = OpenAI(api_key=openaikey)
 
-    # Nom du répertoire de base (ajout de l'extension .csv)
     base_name = os.path.basename(os.path.normpath(base_directory))
     output_file = os.path.join(base_directory, base_name + ".csv")
     
@@ -235,7 +215,6 @@ def process_caption_txt_with_openai(base_directory):
         print(f"Erreur lors de l'ouverture du fichier {output_file} : {e}")
         return
 
-    # Pour chaque fichier texte, lire le contenu et appeler l'API OpenAI, puis reformuler le résultat
     txt_files = list_txt_files_from_ref_dirs(base_directory)    
     for txt_file in txt_files:
         try:
@@ -261,10 +240,7 @@ def process_caption_txt_with_openai(base_directory):
     out_f.close()
 
 def main():
-    # Traiter les images avec l'API ComfyUI et récupérer le dossier de base utilisé
     base_dir = process_images()
-    
-    # Une fois les fichiers .txt générés dans les dossiers 'ref', on les envoie à OpenAI et écrit le résultat dans le fichier CSV
     process_caption_txt_with_openai(base_dir)
 
 if __name__ == "__main__":
