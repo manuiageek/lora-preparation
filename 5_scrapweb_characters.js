@@ -23,7 +23,7 @@ async function downloadImage(url, filePath) {
 
 (async () => {
   // URL de la page listant les personnages
-  const url = 'https://myanimelist.net/anime/195/Onegai%E2%98%86Teacher/characters';
+  const url = 'https://myanimelist.net/manga/114701/Fairy_Tail__100_Years_Quest/characters';
 
   // Lance le navigateur en mode headless
   const browser = await puppeteer.launch({ headless: true });
@@ -81,10 +81,7 @@ async function downloadImage(url, filePath) {
       // Création du dossier pour ce personnage dans "images"
       fs.mkdirSync(dirPath, { recursive: true });
       console.log(`Répertoire créé : ${dirPath}`);
-      // Création du sous-dossier "ref"
-      const refDir = path.join(dirPath, 'ref');
-      fs.mkdirSync(refDir, { recursive: true });
-      console.log(`Sous-dossier 'ref' créé : ${refDir}`);
+      // Note : plus de sous-dossier 'ref'. Les images seront stockées directement dans le répertoire du personnage.
 
       let imageUrl = '';
       // Si l'image est disponible, extraire son URL
@@ -103,7 +100,7 @@ async function downloadImage(url, filePath) {
         if (imageUrl) {
           // Détermination du nom de fichier à partir de l'URL de l'image (suppression de potentiels paramètres)
           const fileName = path.basename(imageUrl.split('?')[0]);
-          const filePath = path.join(refDir, fileName);
+          const filePath = path.join(dirPath, fileName);
   
           try {
             console.log(`Téléchargement de l'image vers ${filePath}`);
