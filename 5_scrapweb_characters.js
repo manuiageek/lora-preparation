@@ -57,8 +57,8 @@ async function downloadImage(url, filePath) {
 
       // Extraction du nom (dernier segment de l'URL)
       const urlName = link.split('/').pop();
-      const name = urlName;
-
+      // Nettoyage du nom pour enlever les caractères indésirables (par exemple "%")
+      const name = urlName.replace(/[^a-zA-Z0-9-_]/g, '');
       // Vérification : si le dossier du personnage existe déjà, on passe ce personnage
       const dirPath = path.join('images', name);
       if (fs.existsSync(dirPath)) {
