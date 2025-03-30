@@ -7,7 +7,7 @@ from openai import OpenAI  # Importation de la librairie OpenAI
 # ---------------------------
 # Paramètres de l'API ComfyUI
 # ---------------------------
-API_URL = "http://127.0.0.1:8187/prompt"  # Vérifie que l'endpoint est correct
+API_URL = "http://127.0.0.1:8188/prompt"  # Vérifie que l'endpoint est correct
 HEADERS = {"Content-Type": "application/json"}
 WORKFLOW_FILE = "CAPTION_API.json"      # Chemin vers le fichier JSON du workflow
 
@@ -27,8 +27,8 @@ def call_llm(user_keywords, openai_client):
         "I will provide you with a list of keywords. Reorder the keywords according to these rules:\n"
         "1) The first keyword remains in its original position.\n"
         "2) Next, include all keywords that describe physical attributes (e.g., eyes, hair colors).\n"
-        "3) Then, delete the keywords related to clothing.\n"
-        "4) Finally, delete all remaining keywords, including behavioral descriptors, at the end.\n"
+        "3) Then, include the keywords related to clothing.\n"
+        "4) Finally, include all remaining keywords, including behavioral descriptors (e.g. own_hands_together), at the end.\n"
         "Please don't modify any keyword, leave them as they are.\n"
         "Ensure that the output maintains the exact same format "
         "as the input without any additional explanations. only one line output."
@@ -43,12 +43,7 @@ def call_llm(user_keywords, openai_client):
         ]
     }
     try:
-        response = requests.post(ollama_url, json=payload, timeout=200)
-        response.raise_for_status()
-        data = response.json()
-        return data['choices'][0]['message']['content']
-    except Exception as e:
-        print("Erreur lors de l'appel à Ollama, utilisation de OpenAI :", e)
+        # Première tentative avec ChatGPT (OpenAI)
         completion = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -56,7 +51,19 @@ def call_llm(user_keywords, openai_client):
                 {"role": "user", "content": user_keywords}
             ]
         )
-        return completion.choices[0].message.content
+        result = completion.choices[0].message.content
+        return result
+    except Exception as e:
+        print("Erreur lors de l'appel à OpenAI :", e)
+        # try:
+            # Appel de secours avec Ollama
+            # response = requests.post(ollama_url, json=payload, timeout=200)
+            # response.raise_for_status()
+            # data = response.json()
+            # return data['choices'][0]['message']['content']
+        # except Exception as ex:
+            # print("Erreur lors de l'appel à Ollama également :", ex)
+            # raise
 
 def list_images_from_ref_dirs(base_directory):
     """
@@ -108,7 +115,12 @@ def call_api_for_image(image_path, workflow_template):
     
     # Modification des paramètres du workflow :
     # Exemple de TAGS_EXCLUDED_PARAM (peut rester en dur)
-    workflow["105"]["inputs"]["Text"] = "1girl,1boy,solo,breasts,large_breasts,medium_breasts,cleavage,between_breasts,small_breasts,anime_coloring,looking_at_viewer,"
+    workflow["105"]["inputs"]["Text"] = (
+        "1girl,1boy,solo,breasts,large_breasts,medium_breasts,"
+        "cleavage,between_breasts,small_breasts,anime_coloring,looking_at_viewer,"
+        "simple_background,white_background,smile,smiling,upper_body,personal_background,"
+        "white_background,blue_sky,outdoors,blurry,sky,thumbs_up,smirk,"
+    )
     
     # Pour la clé KEYWORD_PARAM, on récupère le nom du dossier parent de "ref"
     folder_name = os.path.basename(os.path.dirname(os.path.dirname(image_path)))
