@@ -184,7 +184,7 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                     threshold=params['THRESHOLD'],
                     device_type=params['device_type']
                 )
-                copy_tasks = []
+                # Pour chaque image du batch, on vérifie les conditions l'une après l'autre
                 for idx, (image_path_str, predicted_tags_set, result_tags) in enumerate(batch_results):
                     print(f"Traitement de l'image : {image_path_str}")
                     image_tensor = images_batch[idx]
@@ -192,96 +192,94 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                     new_filename = f"{subfolder_name}_{os.path.basename(image_path_str)}"
                     has_one_person = 'solo' in predicted_tags_set
 
-                    # ===================
-                    # Cas des yeux fermés 
-                    # ===================
+                    # 1. Cas des yeux fermés
                     if has_one_person and 'closed_eyes' in predicted_tags_set:
                         destination_path = os.path.join(z_closed_eyes_folder, new_filename)
-                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
                         print(f"L'image '{image_path_str}' a été classée dans 'z_closed_eyes'")
                         continue
 
-                    # ===================
-                    # Cas extreme_closeup 
-                    # ===================
+                    # 2. Cas extreme_closeup
                     if has_one_person and 'extreme_closeup' in predicted_tags_set:
                         destination_path = os.path.join(z_zoomface_folder, new_filename)
-                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
                         print(f"L'image '{image_path_str}' a été classée dans 'z_zoomface'")
                         continue
 
-                    # ===================
-                    # Cas facelesss 
-                    # ===================
+                    # 3. Cas faceless
                     if has_one_person and 'faceless' in predicted_tags_set:
                         destination_path = os.path.join(z_noface_folder, new_filename)
-                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
                         print(f"L'image '{image_path_str}' a été classée dans 'z_noface'")
                         continue
 
-                    # =======================
-                    # TRI JOUR/NUIT + GENRE
-                    # =======================
+                    # 4. Cas de l'image de nuit
                     if is_night:
-                        has_girl = any(tag in predicted_tags_set for tag in girl_tags)
-                        if has_girl:
+                        if any(tag in predicted_tags_set for tag in girl_tags):
                             if has_one_person:
                                 destination_path = os.path.join(z_nightmisc_girl_1person_folder, new_filename)
                                 print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc_girl/1person'")
                             else:
                                 destination_path = os.path.join(z_nightmisc_girl_folder, new_filename)
                                 print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc_girl'")
-                            copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                            copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
+                            continue
                         else:
                             destination_path = os.path.join(z_nightmisc_folder, new_filename)
-                            copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
+                            copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
                             print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc'")
-                        continue
+                            continue
 
-                    has_girl = any(tag in predicted_tags_set for tag in girl_tags)
-                    has_boy = any(tag in predicted_tags_set for tag in boy_tags)
-                    has_person = any(tag in predicted_tags_set for tag in person_tags)
-                    if has_girl:
-                        image_characters = []
+                    # 5. Cas des filles (jour)
+                    if any(tag in predicted_tags_set for tag in girl_tags):
+                        # Vérifier les correspondances avec les personnages dans l'ordre
+                        classified = False
                         for character, char_tags in characters.items():
-                            if len(char_tags) == 0:
+                            if not char_tags:
                                 continue
                             matching_tags = predicted_tags_set.intersection(char_tags)
                             match_ratio = len(matching_tags) / len(char_tags)
                             if match_ratio >= params['MATCH_THRESHOLD']:
-                                image_characters.append(character)
-                        if image_characters:
-                            for character in image_characters:
                                 destination_path = os.path.join(character_folders[character], new_filename)
-                                copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
-                            print(f"L'image '{image_path_str}' a été classée dans : {', '.join(image_characters)}")
+                                copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
+                                print(f"L'image '{image_path_str}' a été classée dans '{character}'")
+                                classified = True
+                                break
+                        if classified:
+                            continue
+                        # Si aucun personnage précis n'est retrouvé
+                        if has_one_person:
+                            destination_path = os.path.join(z_daymisc_girl_1person_folder, new_filename)
+                            print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl/1person'")
                         else:
-                            if has_one_person:
-                                destination_path = os.path.join(z_daymisc_girl_1person_folder, new_filename)
-                                print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl/1person'")
-                            else:
-                                destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
-                                print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl'")
-                            copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
-                    elif has_boy:
+                            destination_path = os.path.join(z_daymisc_girl_folder, new_filename)
+                            print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc_girl'")
+                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
+                        continue
+
+                    # 6. Cas des garçons (jour)
+                    if any(tag in predicted_tags_set for tag in boy_tags):
                         if has_one_person:
                             destination_path = os.path.join(zboy_1person_folder, new_filename)
                             print(f"L'image '{image_path_str}' a été classée dans 'zboy/1person'")
                         else:
                             destination_path = os.path.join(zboy_folder, new_filename)
                             print(f"L'image '{image_path_str}' a été classée dans 'zboy'")
-                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
-                    elif has_person:
-                        destination_path = os.path.join(z_daymisc_folder, new_filename)
-                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
-                        print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc'")
-                    else:
-                        destination_path = os.path.join(z_background_folder, new_filename)
-                        copy_tasks.append(copy_executor.submit(shutil.copy2, image_path_str, destination_path))
-                        print(f"L'image '{image_path_str}' a été classée dans 'z_background'")
+                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
+                        continue
 
-                for task in copy_tasks:
-                    task.result()
+                    # 7. Cas générique de personnes (jour)
+                    if any(tag in predicted_tags_set for tag in person_tags):
+                        destination_path = os.path.join(z_daymisc_folder, new_filename)
+                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
+                        print(f"L'image '{image_path_str}' a été classée dans 'z_daymisc'")
+                        continue
+
+                    # 8. Aucune correspondance : arrière-plan
+                    destination_path = os.path.join(z_background_folder, new_filename)
+                    copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
+                    print(f"L'image '{image_path_str}' a été classée dans 'z_background'")
+
                 del images_batch, image_paths_batch, batch_results
                 gc.collect()
         print(f"Lot {chunk_idx + 1}/{total_chunks} traité.")
@@ -309,7 +307,7 @@ if __name__ == '__main__':
         type=str,
         default=r'T:\_SELECT\_READY\FAIRY TAIL 100 YEARS QUEST',  # Chemin par défaut, à adapter si nécessaire
         help="Chemin vers le dossier contenant les images"
-    )    
+    )
     parser.add_argument(
         '--character_file',
         type=str,
