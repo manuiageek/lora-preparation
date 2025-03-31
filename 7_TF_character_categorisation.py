@@ -307,24 +307,24 @@ if __name__ == '__main__':
     parser.add_argument(
         '--root_folder',
         type=str,
-        default=r'T:\_SELECT\_READY\ONEGAI TEACHER',  # Chemin par défaut, à adapter si nécessaire
+        default=r'T:\_SELECT\_READY\FAIRY TAIL 100 YEARS QUEST',  # Chemin par défaut, à adapter si nécessaire
         help="Chemin vers le dossier contenant les images"
-    )
+    )    
     parser.add_argument(
         '--character_file',
         type=str,
-        default=r'chartags\ONEGAI TEACHER.csv',  # Chemin par défaut, à adapter
+        default=r'chartags\FAIRY TAIL 100 YEARS QUEST.csv',  # Chemin par défaut, à adapter
         help="Chemin vers le fichier CSV des personnages"
     )
     args = parser.parse_args()
 
     # Paramètres du script
     params = {
-        'THRESHOLD': 0.4,
+        'THRESHOLD': 0.45,
         'MATCH_THRESHOLD': 0.6,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
-        'NUM_CORES': 32,       # Nombre de cœurs à utiliser
-        'BATCH_SIZE': 64,      # Taille du batch pour le traitement
+        'NUM_CORES': 24,       # Nombre de cœurs à utiliser
+        'BATCH_SIZE': 30,      # Taille du batch pour le traitement
         'MAX_MEMORY_BYTES': 32 * 1024 ** 3  # 32 Go
     }
 
