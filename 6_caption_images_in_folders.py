@@ -14,7 +14,7 @@ HEADERS = {"Content-Type": "application/json"}
 WORKFLOW_FILE = "CAPTION_API.json"      # Chemin vers le fichier JSON du workflow
 
 # ---------------------------
-# Extensions autorisées pour les images
+# Extensions autorisées pour les images et les fichiers texte
 # ---------------------------
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.tif', '.heic'}
 ALLOWED_TXT_EXTENSIONS = {'.txt'}
@@ -64,49 +64,45 @@ def call_llm(user_keywords, openai_client):
                 )
                 sys.exit(error_message)
 
-def list_images_from_ref_dirs(base_directory):
+def list_images_from_subfolders(base_directory):
     """
     Parcourt le répertoire de base et recherche, pour chaque sous-dossier,
-    le dossier 'ref' dans lequel il y a des images.
+    toutes les images directement présentes dans ce sous-dossier.
     """
     image_paths = []
     for entry in os.listdir(base_directory):
         entry_path = os.path.join(base_directory, entry)
         if os.path.isdir(entry_path):
-            ref_dir = os.path.join(entry_path, "ref")
-            if os.path.isdir(ref_dir):
-                for filename in os.listdir(ref_dir):
-                    file_path = os.path.join(ref_dir, filename)
-                    if os.path.isfile(file_path):
-                        _, ext = os.path.splitext(filename)
-                        if ext.lower() in ALLOWED_EXTENSIONS:
-                            image_paths.append(file_path)
+            for filename in os.listdir(entry_path):
+                file_path = os.path.join(entry_path, filename)
+                if os.path.isfile(file_path):
+                    _, ext = os.path.splitext(filename)
+                    if ext.lower() in ALLOWED_EXTENSIONS:
+                        image_paths.append(file_path)
     return image_paths
 
-def list_txt_files_from_ref_dirs(base_directory):
+def list_txt_files_from_subfolders(base_directory):
     """
     Parcourt le répertoire de base et recherche, pour chaque sous-dossier,
-    le dossier 'ref' dans lequel il y a des fichiers .txt générés.
+    tous les fichiers .txt présents directement dans ce sous-dossier.
     """
     txt_paths = []
     for entry in os.listdir(base_directory):
         entry_path = os.path.join(base_directory, entry)
         if os.path.isdir(entry_path):
-            ref_dir = os.path.join(entry_path, "ref")
-            if os.path.isdir(ref_dir):
-                for filename in os.listdir(ref_dir):
-                    file_path = os.path.join(ref_dir, filename)
-                    if os.path.isfile(file_path):
-                        _, ext = os.path.splitext(filename)
-                        if ext.lower() in ALLOWED_TXT_EXTENSIONS:
-                            txt_paths.append(file_path)
+            for filename in os.listdir(entry_path):
+                file_path = os.path.join(entry_path, filename)
+                if os.path.isfile(file_path):
+                    _, ext = os.path.splitext(filename)
+                    if ext.lower() in ALLOWED_TXT_EXTENSIONS:
+                        txt_paths.append(file_path)
     return txt_paths
 
 def call_api_for_image(image_path, workflow_template):
     """
-    Pour une image donnée, la fonction crée une copie du workflow,
-    modifie les paramètres relatifs au chemin de l'image, au dossier 'ref',
-    et au nom du dossier parent du répertoire "ref", puis appelle l'API ComfyUI.
+    Pour une image donnée, cette fonction crée une copie du workflow,
+    modifie les paramètres relatifs au chemin de l'image, au dossier de l'image,
+    et au nom du dossier parent (le nom du sous-dossier), puis appelle l'API ComfyUI.
     Le JSON de réponse est renvoyé.
     """
     workflow = copy.deepcopy(workflow_template)
@@ -118,7 +114,8 @@ def call_api_for_image(image_path, workflow_template):
         "white_background,blue_sky,outdoors,blurry,sky,thumbs_up,smirk,closed_eyes,"
     )
     
-    folder_name = os.path.basename(os.path.dirname(os.path.dirname(image_path)))
+    # Puisque les images se trouvent directement dans le sous-dossier, on récupère le nom du dossier parent
+    folder_name = os.path.basename(os.path.dirname(image_path))
     workflow["67"]["inputs"]["Text"] = folder_name
     
     workflow["94"]["inputs"]["value"] = image_path
@@ -152,7 +149,8 @@ def parse_keywords(keywords_string):
 
 def process_images():
     """
-    Traite les images en parcourant le dossier de base pour trouver les images dans les sous-dossiers 'ref'.
+    Traite les images en parcourant le dossier de base pour trouver, 
+    dans chacun de ses sous-dossiers, les images.
     Pour chaque image, appelle l'API ComfyUI et affiche la réponse.
     Renvoie le dossier de base utilisé pour pouvoir le réutiliser ensuite.
     """
@@ -176,7 +174,7 @@ def process_images():
         print(f"Erreur lors du chargement de {WORKFLOW_FILE}: {e}")
         exit(1)
 
-    images = list_images_from_ref_dirs(BASE_DIR)
+    images = list_images_from_subfolders(BASE_DIR)
     print("Nombre d'images trouvées :", len(images))
     
     for image in images:
@@ -191,7 +189,7 @@ def process_images():
 
 def process_caption_txt_with_openai(base_directory):
     """
-    Pour chaque fichier .txt généré dans les dossiers 'ref' du dossier de base,
+    Pour chaque fichier .txt présent dans les sous-dossiers du dossier de base,
     lit son contenu, l'envoie à l'API OpenAI avec un pré-prompt précis, puis
     reformule le résultat sous la forme :
         '1er keyword':['keyword1','keyword2',...],
@@ -215,7 +213,7 @@ def process_caption_txt_with_openai(base_directory):
         print(f"Erreur lors de l'ouverture du fichier {output_file} : {e}")
         return
 
-    txt_files = list_txt_files_from_ref_dirs(base_directory)    
+    txt_files = list_txt_files_from_subfolders(base_directory)    
     for txt_file in txt_files:
         try:
             with open(txt_file, "r", encoding="utf-8") as f:
