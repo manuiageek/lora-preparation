@@ -23,7 +23,7 @@ async function downloadImage(url, filePath) {
 
 (async () => {
   // URL de la page listant les personnages
-  const url = 'https://myanimelist.net/anime/887/Megami_Kouhosei_Special_Curriculum/characters';
+  const url = 'https://myanimelist.net/anime/53802/25-jigen_no_Ririsa/characters';
 
   // Lance le navigateur en mode headless
   const browser = await puppeteer.launch({ headless: true });
