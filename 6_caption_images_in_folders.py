@@ -155,18 +155,11 @@ def process_images():
     Pour chaque image, appelle l'API ComfyUI et affiche la réponse.
     Renvoie le dossier de base utilisé pour pouvoir le réutiliser ensuite.
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    default_base_dir = os.path.join(script_dir, "images")
-    
-    BASE_DIR = input(f"Veuillez entrer le chemin complet du dossier de base pour le traitement des images (appuyez sur Entrée pour utiliser '{default_base_dir}') : ").strip()
-    if not BASE_DIR:
-        BASE_DIR = default_base_dir
+    BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base pour le traitement des images : ").strip()
 
-    while not os.path.isdir(BASE_DIR):
-        print("Le chemin saisi n'est pas un dossier valide. Veuillez réessayer.")
-        BASE_DIR = input(f"Veuillez entrer le chemin complet du dossier de base (ou appuyez sur Entrée pour utiliser '{default_base_dir}') : ").strip()
-        if not BASE_DIR:
-            BASE_DIR = default_base_dir
+    while not (BASE_DIR and os.path.isdir(BASE_DIR)):
+        print("Vous devez saisir un chemin valide vers un dossier existant.")
+        BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base pour le traitement des images : ").strip()
 
     try:
         with open(WORKFLOW_FILE, "r", encoding="utf-8") as f:
@@ -196,6 +189,11 @@ def process_caption_txt_with_openai(base_directory):
         '1er keyword':['keyword1','keyword2',...],
     et écrit ce résultat dans un fichier CSV dont le nom est celui du dossier de base.
     """
+    txt_files = list_txt_files_from_subfolders(base_directory)
+    if not txt_files:
+        print("Aucun fichier texte (.txt) trouvé pour le traitement OpenAI.")
+        return
+
     try:
         with open("open_configkey.txt", "r", encoding="utf-8") as key_file:
             openaikey = key_file.read().strip()
@@ -214,7 +212,6 @@ def process_caption_txt_with_openai(base_directory):
         print(f"Erreur lors de l'ouverture du fichier {output_file} : {e}")
         return
 
-    txt_files = list_txt_files_from_subfolders(base_directory)    
     for txt_file in txt_files:
         try:
             with open(txt_file, "r", encoding="utf-8") as f:
@@ -227,7 +224,7 @@ def process_caption_txt_with_openai(base_directory):
         try:
             response_text = call_llm(user_keywords, client)
         except Exception as e:
-            print(f"Une erreur s'est produite lors de l'appel à l'API LLM pour le fichier {txt_file} : {str(e)}")
+            print(f"Une erreur s'est produite lors de l'appel à l'API OpenAI pour le fichier {txt_file} : {str(e)}")
             continue
 
         formatted_output = parse_keywords(response_text)
@@ -237,6 +234,7 @@ def process_caption_txt_with_openai(base_directory):
             except Exception as e:
                 print(f"Erreur lors de l'écriture dans le fichier {output_file} : {e}")
     out_f.close()
+    print(f"Les résultats OpenAI ont été enregistrés dans {output_file}")
 
 def main():
     base_dir = process_images()

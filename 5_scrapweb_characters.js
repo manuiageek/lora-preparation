@@ -23,7 +23,20 @@ async function downloadImage(url, filePath) {
 
 (async () => {
   // URL de la page listant les personnages
-  const url = 'https://myanimelist.net/anime/53802/25-jigen_no_Ririsa/characters';
+  const url = 'https://myanimelist.net/anime/889/Black_Lagoon/characters';
+  
+  // Extraction du dossier de base à partir de l'URL
+  // On extrait la partie située avant "characters"
+  const urlObj = new URL(url);
+  // Exemple de pathname : "/anime/40128/Arte/characters"
+  const parts = urlObj.pathname.split('/').filter(Boolean); // ["anime", "40128", "Arte", "characters"]
+  // Supposons que le nom à utiliser est le troisième segment (index 2) tel que dans l'exemple
+  const baseFolderName = parts.length >= 3 ? parts[2] : 'default';
+  // Dossier de destination pour les images
+  const baseDirPath = path.join('images', baseFolderName);
+  // Assurez-vous que le dossier de base existe
+  fs.mkdirSync(baseDirPath, { recursive: true });
+  console.log(`Dossier de base créé ou existant : ${baseDirPath}`);
 
   // Lance le navigateur en mode headless
   const browser = await puppeteer.launch({ headless: true });
@@ -59,8 +72,8 @@ async function downloadImage(url, filePath) {
       const urlName = link.split('/').pop();
       // Nettoyage du nom pour enlever les caractères indésirables (par exemple "%")
       const name = urlName.replace(/[^a-zA-Z0-9-_]/g, '');
-      // Vérification : si le dossier du personnage existe déjà, on passe ce personnage
-      const dirPath = path.join('images', name);
+      // Chemin complet du dossier du personnage dans la hiérarchie /images/<baseFolderName>/<name>
+      const dirPath = path.join(baseDirPath, name);
       if (fs.existsSync(dirPath)) {
         console.log(`Le personnage ${name} a déjà été traité. Passage au suivant.`);
         continue;
@@ -78,7 +91,7 @@ async function downloadImage(url, filePath) {
         imageAvailable = false;
       }
 
-      // Création du dossier pour ce personnage dans "images"
+      // Création du dossier pour ce personnage dans le dossier de base
       fs.mkdirSync(dirPath, { recursive: true });
       console.log(`Répertoire créé : ${dirPath}`);
       // Note : plus de sous-dossier 'ref'. Les images seront stockées directement dans le répertoire du personnage.

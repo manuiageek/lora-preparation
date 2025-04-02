@@ -46,3 +46,13 @@ for line in lines:
         print(f"Erreur lors de l'exécution du script {script2} pour le répertoire {root_folder} : {e}")
         continue  # Passer à la ligne suivante en cas d'erreur
 
+    # Exécuter le script 3_delete_duplicate_images.py
+    try:
+        subprocess.run(
+            ["python", script1, "--directory", root_folder],
+            check=True
+        )
+        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"Le script {script1} a été exécuté avec succès pour le répertoire {root_folder} à {end_time}.")
+    except subprocess.CalledProcessError as e:
+        print(f"Erreur lors de l'exécution du script {script1} pour le répertoire {root_folder} : {e}") 
