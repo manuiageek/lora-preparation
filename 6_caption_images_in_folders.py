@@ -1,4 +1,3 @@
-------------------------------------------------
 import os
 import json
 import copy
@@ -32,7 +31,8 @@ def call_llm(user_keywords, openai_client):
         "3) Then, exclude the keywords related to clothing.\n"
         "4) Finally, exclude all remaining keywords about behavioral description (e.g. own_hands_together).\n"
         "Please don't modify any keyword, leave them as they are.\n"
-        "Ensure that the output maintains the exact same format as the input without any additional explanations. only one line output."
+        "Ensure that the output maintains the exact same format "
+        "as the input without any additional explanations. only one line output."
     )
 
     max_retries = 5         # Nombre maximum de tentatives
@@ -241,6 +241,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-------------------------------------------------
-
-This version includes a delay of eight seconds before beginning the OpenAI API calls in process_caption_txt_with_openai, as suggested.
