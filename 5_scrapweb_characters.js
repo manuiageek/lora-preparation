@@ -23,7 +23,7 @@ async function downloadImage(url, filePath) {
 
 (async () => {
   // URL de la page listant les personnages
-  const url = "https://myanimelist.net/anime/57334/Dandadan/characters";
+  const url = "https://myanimelist.net/anime/51916/Dekiru_Neko_wa_Kyou_mo_Yuuutsu/characters";
 
   // Extraction du dossier de base à partir de l'URL
   // On extrait la partie située avant "characters"
@@ -39,7 +39,11 @@ async function downloadImage(url, filePath) {
   console.log(`Dossier de base créé ou existant : ${baseDirPath}`);
 
   // Lance le navigateur en mode headless
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({ 
+    headless: true,  
+    ignoreHTTPSErrors: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
   const page = await browser.newPage();
 
   // Définit un User-Agent réaliste
