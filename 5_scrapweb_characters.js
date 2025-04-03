@@ -2,6 +2,21 @@ import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
 import fetch from "node-fetch"; // installer avec "npm install node-fetch" si nécessaire
+import { createInterface } from "readline";
+
+// Fonction utilitaire pour poser une question à l'utilisateur
+function askQuestion(query) {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) =>
+    rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans);
+    })
+  );
+}
 
 // Fonction utilitaire pour télécharger un fichier depuis une URL vers un chemin local
 async function downloadImage(url, filePath) {
@@ -22,15 +37,19 @@ async function downloadImage(url, filePath) {
 }
 
 (async () => {
-  // URL de la page listant les personnages
-  const url = "https://myanimelist.net/anime/51916/Dekiru_Neko_wa_Kyou_mo_Yuuutsu/characters";
+  // Demande interactive de l'URL de la page listant les personnages
+  const urlInput = await askQuestion("Veuillez entrer l'URL Character MyAnimeList à scraper : ");
+  const url = urlInput.trim();
+  if (!url) {
+    console.error("Aucune URL saisie. Fin du script.");
+    process.exit(1);
+  }
 
   // Extraction du dossier de base à partir de l'URL
-  // On extrait la partie située avant "characters"
   const urlObj = new URL(url);
   // Exemple de pathname : "/anime/40128/Arte/characters"
   const parts = urlObj.pathname.split("/").filter(Boolean); // ["anime", "40128", "Arte", "characters"]
-  // Supposons que le nom à utiliser est le troisième segment (index 2) tel que dans l'exemple
+  // Supposons que le nom à utiliser est le troisième segment (index 2) s'il est disponible
   const baseFolderName = parts.length >= 3 ? parts[2] : "default";
   // Dossier de destination pour les images (changement : "images" devient "images_web")
   const baseDirPath = path.join("images_web", baseFolderName);
@@ -55,15 +74,11 @@ async function downloadImage(url, filePath) {
     // Accès à la page et attente des éléments contenant les noms de personnages
     await page.goto(url, { waitUntil: "networkidle2" });
     await page.waitForSelector("h3.h3_character_name", { timeout: 10000 });
-    console.log(
-      "La page des personnages est chargée, début de l'extraction des liens..."
-    );
+    console.log("La page des personnages est chargée, début de l'extraction des liens...");
 
     // Extraction de tous les liens vers les pages de détails des personnages
     const characterLinks = await page.evaluate(() => {
-      const elements = Array.from(
-        document.querySelectorAll("h3.h3_character_name")
-      );
+      const elements = Array.from(document.querySelectorAll("h3.h3_character_name"));
       return elements
         .map((el) => (el.parentElement ? el.parentElement.href : null))
         .filter((link) => link !== null);
@@ -71,22 +86,21 @@ async function downloadImage(url, filePath) {
     console.log(`Nombre de personnages trouvés : ${characterLinks.length}`);
 
     const results = [];
+    const totalCharacters = characterLinks.length;
 
     // Itération sur chaque lien de personnage
-    for (let i = 0; i < characterLinks.length; i++) {
+    for (let i = 0; i < totalCharacters; i++) {
       const link = characterLinks[i];
-      console.log(`Traitement du personnage ${i + 1} : ${link}`);
+      console.log(`Traitement du personnage ${i + 1}/${totalCharacters} : ${link}`);
 
       // Extraction du nom (dernier segment de l'URL)
       const urlName = link.split("/").pop();
-      // Nettoyage du nom pour enlever les caractères indésirables (par exemple "%")
+      // Nettoyage du nom pour enlever les caractères indésirables
       const name = urlName.replace(/[^a-zA-Z0-9-_]/g, "");
       // Chemin complet du dossier du personnage dans la hiérarchie /images_web/<baseFolderName>/<name>
       const dirPath = path.join(baseDirPath, name);
       if (fs.existsSync(dirPath)) {
-        console.log(
-          `Le personnage ${name} a déjà été traité. Passage au suivant.`
-        );
+        console.log(`Le personnage ${name} a déjà été traité. Passage au suivant.`);
         continue;
       }
 
@@ -105,7 +119,6 @@ async function downloadImage(url, filePath) {
       // Création du dossier pour ce personnage dans le dossier de base
       fs.mkdirSync(dirPath, { recursive: true });
       console.log(`Répertoire créé : ${dirPath}`);
-      // Note : plus de sous-dossier 'ref'. Les images seront stockées directement dans le répertoire du personnage.
 
       let imageUrl = "";
       // Si l'image est disponible, extraire son URL
@@ -133,10 +146,7 @@ async function downloadImage(url, filePath) {
             await downloadImage(imageUrl, filePath);
             console.log("Téléchargement réussi !");
           } catch (downloadError) {
-            console.error(
-              "Erreur lors du téléchargement de l'image :",
-              downloadError
-            );
+            console.error("Erreur lors du téléchargement de l'image :", downloadError);
           }
         } else {
           console.log(`Aucune URL d'image trouvée pour ${name}.`);
