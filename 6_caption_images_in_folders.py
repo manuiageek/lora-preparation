@@ -112,7 +112,7 @@ def call_api_for_image(image_path, workflow_template):
         "cleavage,between_breasts,small_breasts,anime_coloring,looking_at_viewer,"
         "simple_background,white_background,smile,smiling,upper_body,personal_background,"
         "white_background,blue_sky,outdoors,blurry,sky,thumbs_up,smirk,closed_eyes,"
-        "portrait,close-up,border,"
+        "portrait,close-up,border,transparent_background,"
     )
     
     # Puisque les images se trouvent directement dans le sous-dossier, on récupère le nom du dossier parent
