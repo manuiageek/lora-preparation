@@ -317,10 +317,10 @@ if __name__ == '__main__':
     # Paramètres du script
     params = {
         'THRESHOLD': 0.3,
-        'MATCH_THRESHOLD': 0.50,
+        'MATCH_THRESHOLD': 0.4,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
         'NUM_CORES': 24,       # Nombre de cœurs à utiliser
-        'BATCH_SIZE': 30,      # Taille du batch pour le traitement
+        'BATCH_SIZE': 50,      # Taille du batch pour le traitement
         'MAX_MEMORY_BYTES': 32 * 1024 ** 3  # 32 Go
     }
 
