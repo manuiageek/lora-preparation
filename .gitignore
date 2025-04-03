@@ -34,10 +34,10 @@ build/
 models/
 
 # Ignorer le dossier images et tout son contenu
-images/*
+images_web/*
 
 # Ne pas ignorer le fichier .gitkeep dans le dossier images
-!images/.gitkeep
+!images_web/.gitkeep
 
 # Ignorer les fichiers venv
 venv/

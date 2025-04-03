@@ -32,8 +32,8 @@ async function downloadImage(url, filePath) {
   const parts = urlObj.pathname.split('/').filter(Boolean); // ["anime", "40128", "Arte", "characters"]
   // Supposons que le nom à utiliser est le troisième segment (index 2) tel que dans l'exemple
   const baseFolderName = parts.length >= 3 ? parts[2] : 'default';
-  // Dossier de destination pour les images
-  const baseDirPath = path.join('images', baseFolderName);
+  // Dossier de destination pour les images (changement : "images" devient "images_web")
+  const baseDirPath = path.join('images_web', baseFolderName);
   // Assurez-vous que le dossier de base existe
   fs.mkdirSync(baseDirPath, { recursive: true });
   console.log(`Dossier de base créé ou existant : ${baseDirPath}`);
@@ -72,7 +72,7 @@ async function downloadImage(url, filePath) {
       const urlName = link.split('/').pop();
       // Nettoyage du nom pour enlever les caractères indésirables (par exemple "%")
       const name = urlName.replace(/[^a-zA-Z0-9-_]/g, '');
-      // Chemin complet du dossier du personnage dans la hiérarchie /images/<baseFolderName>/<name>
+      // Chemin complet du dossier du personnage dans la hiérarchie /images_web/<baseFolderName>/<name>
       const dirPath = path.join(baseDirPath, name);
       if (fs.existsSync(dirPath)) {
         console.log(`Le personnage ${name} a déjà été traité. Passage au suivant.`);
