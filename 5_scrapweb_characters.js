@@ -23,8 +23,7 @@ async function downloadImage(url, filePath) {
 
 (async () => {
   // URL de la page listant les personnages
-  const url =
-    "https://myanimelist.net/anime/35507/Youkoso_Jitsuryoku_Shijou_Shugi_no_Kyoushitsu_e/characters";
+  const url = "https://myanimelist.net/anime/57334/Dandadan/characters";
 
   // Extraction du dossier de base à partir de l'URL
   // On extrait la partie située avant "characters"

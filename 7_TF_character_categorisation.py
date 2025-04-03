@@ -307,19 +307,17 @@ if __name__ == '__main__':
         type=str,
         default=r'T:\_SELECT\_READY\25-JIGEN NO RIRISA',  # Chemin par défaut, à adapter si nécessaire
         help="Chemin vers le dossier contenant les images"
-    )    
-    parser.add_argument(
-        '--character_file',
-        type=str,
-        default=r'.\chartags\25-JIGEN NO RIRISA.csv',  # Chemin par défaut, à adapter
-        help="Chemin vers le fichier CSV des personnages"
     )
     args = parser.parse_args()
+
+    # Construire le chemin du fichier des personnages à partir de root_folder
+    character_file_name = os.path.basename(os.path.normpath(args.root_folder))  # Récupérer le nom du dernier répertoire
+    character_file = os.path.join('.', 'chartags', f'{character_file_name}.csv')  # Construire le chemin complet
 
     # Paramètres du script
     params = {
         'THRESHOLD': 0.3,
-        'MATCH_THRESHOLD': 0.55,
+        'MATCH_THRESHOLD': 0.50,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
         'NUM_CORES': 24,       # Nombre de cœurs à utiliser
         'BATCH_SIZE': 30,      # Taille du batch pour le traitement
@@ -357,7 +355,7 @@ if __name__ == '__main__':
     root_folder = args.root_folder
 
     # Chargement du dictionnaire des personnages depuis le fichier CSV
-    with open(args.character_file, 'r', encoding='utf-8') as file:
+    with open(character_file, 'r', encoding='utf-8') as file:
         data = file.read()
     characters = ast.literal_eval("{" + data + "}")
 
