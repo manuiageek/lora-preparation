@@ -23,7 +23,7 @@ async function downloadImage(url, filePath) {
 
 (async () => {
   // URL de la page listant les personnages
-  const url = 'https://myanimelist.net/anime/889/Black_Lagoon/characters';
+  const url = 'https://myanimelist.net/anime/60/Chrno_Crusade/characters';
   
   // Extraction du dossier de base à partir de l'URL
   // On extrait la partie située avant "characters"
