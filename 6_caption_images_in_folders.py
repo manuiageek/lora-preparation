@@ -29,7 +29,7 @@ def call_llm(user_keywords, openai_client):
         "1) The first keyword remains in its original position.\n"
         "2) Next, include all keywords that describe physical attributes (e.g., eyes, hair colors).\n"
         "3) Then, exclude the keywords related to clothing.\n"
-        "4) Finally, exclude all remaining keywords about behavioral description (e.g. own_hands_together).\n"
+        "4) Finally, exclude all remaining keywords about behavioral description (e.g. own_hands_together, background).\n"
         "Please don't modify any keyword, leave them as they are.\n"
         "Ensure that the output maintains the exact same format "
         "as the input without any additional explanations. only one line output."
@@ -112,7 +112,8 @@ def call_api_for_image(image_path, workflow_template):
         "cleavage,between_breasts,small_breasts,anime_coloring,looking_at_viewer,"
         "simple_background,white_background,smile,smiling,upper_body,personal_background,"
         "white_background,blue_sky,outdoors,blurry,sky,thumbs_up,smirk,closed_eyes,"
-        "portrait,close-up,border,transparent_background,"
+        "portrait,close-up,border,transparent_background,blurry_background,"
+        "yellow_background,"
     )
     
     # Puisque les images se trouvent directement dans le sous-dossier, on récupère le nom du dossier parent
@@ -187,7 +188,8 @@ def process_caption_txt_with_openai(base_directory):
     lit son contenu, l'envoie à l'API OpenAI avec un pré-prompt précis, puis
     reformule le résultat sous la forme :
         '1er keyword':['keyword1','keyword2',...],
-    et écrit ce résultat dans un fichier CSV dont le nom est celui du dossier de base.
+    et écrit ce résultat dans un fichier CSV.
+    Le fichier CSV est enregistré dans le répertoire "./chartags".
     """
     txt_files = list_txt_files_from_subfolders(base_directory)
     try:
@@ -200,7 +202,10 @@ def process_caption_txt_with_openai(base_directory):
     client = OpenAI(api_key=openaikey)
 
     base_name = os.path.basename(os.path.normpath(base_directory))
-    output_file = os.path.join(base_directory, base_name + ".csv")
+    # Création du répertoire ./chartags s'il n'existe pas
+    output_directory = os.path.join(".", "chartags")
+    os.makedirs(output_directory, exist_ok=True)
+    output_file = os.path.join(output_directory, base_name + ".csv")
     
     try:
         out_f = open(output_file, "w", encoding="utf-8")
