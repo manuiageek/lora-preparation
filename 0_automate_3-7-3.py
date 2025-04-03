@@ -4,10 +4,10 @@ import sys
 
 # Lire les paramètres à partir du fichier automate_5-3.txt
 try:
-    with open("automate_3-7.txt", "r", encoding='utf-8') as file:
+    with open("automate_3-7-3.txt", "r", encoding='utf-8') as file:
         lines = [line.strip() for line in file if line.strip()]
 except FileNotFoundError:
-    print("Erreur : Le fichier 'automate_3-7.txt' n'existe pas.")
+    print("Erreur : Le fichier 'automate_3-7-3.txt' n'existe pas.")
     sys.exit(1)
 
 # Boucle pour traiter chaque ligne du fichier

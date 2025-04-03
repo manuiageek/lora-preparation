@@ -1,1 +1,1 @@
-T:\_SELECT\_READY\ARTE;chartags\ARTE.csv
+T:\_SELECT\_READY\BLACK LAGOON;chartags\BLACK LAGOON.csv

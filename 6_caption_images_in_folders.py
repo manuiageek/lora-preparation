@@ -190,10 +190,6 @@ def process_caption_txt_with_openai(base_directory):
     et écrit ce résultat dans un fichier CSV dont le nom est celui du dossier de base.
     """
     txt_files = list_txt_files_from_subfolders(base_directory)
-    if not txt_files:
-        print("Aucun fichier texte (.txt) trouvé pour le traitement OpenAI.")
-        return
-
     try:
         with open("open_configkey.txt", "r", encoding="utf-8") as key_file:
             openaikey = key_file.read().strip()
