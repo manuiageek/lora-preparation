@@ -39,10 +39,16 @@ async function downloadImage(url, filePath) {
 (async () => {
   // Demande interactive de l'URL de la page listant les personnages
   const urlInput = await askQuestion("Veuillez entrer l'URL Character MyAnimeList à scraper : ");
-  const url = urlInput.trim();
+  let url = urlInput.trim();
   if (!url) {
     console.error("Aucune URL saisie. Fin du script.");
     process.exit(1);
+  }
+
+  // Vérifie si l'URL se termine par "/characters" ou "/characters/". Sinon, l'ajoute.
+  if (!url.match(/\/characters\/?$/)) {
+    url = url.replace(/\/+$/, ""); // Supprime les slashs en fin d'URL le cas échéant
+    url += "/characters";
   }
 
   // Extraction du dossier de base à partir de l'URL
