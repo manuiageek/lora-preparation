@@ -316,8 +316,8 @@ if __name__ == '__main__':
 
     # Paramètres du script
     params = {
-        'THRESHOLD': 0.3,
-        'MATCH_THRESHOLD': 0.4,
+        'THRESHOLD': 0.35,
+        'MATCH_THRESHOLD': 0.55,
         'device_type': 'gpu',  # 'gpu' ou 'cpu' selon vos besoins
         'NUM_CORES': 24,       # Nombre de cœurs à utiliser
         'BATCH_SIZE': 50,      # Taille du batch pour le traitement
