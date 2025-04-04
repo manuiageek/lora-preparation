@@ -116,7 +116,8 @@ def call_api_for_image(image_path, workflow_template):
         "yellow_background,retro_artstyle,traditional_media,"
         "closed_mouth,hair_intakes,holding_weapon,holding_sword,"
         "hair_between_breasts,teeth,upper_teeth_only,"
-        "closed_mouth,blush,jewelry,brooch,"
+        "closed_mouth,blush,jewelry,brooch,plant,"
+        "long_fingernails,black_cape,black_capelet,"
     )
     
     # Puisque les images se trouvent directement dans le sous-dossier, on récupère le nom du dossier parent
