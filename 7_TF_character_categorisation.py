@@ -57,10 +57,7 @@ def clean_previous_classifications(root_folder, subfolder_name, characters):
                         os.path.join(root_folder, 'z_background'),
                         os.path.join(root_folder, 'zboy', '1person'),
                         os.path.join(root_folder, 'z_daymisc_girl', '1person'),
-                        os.path.join(root_folder, 'z_nightmisc_girl', '1person'),
-                        os.path.join(root_folder, 'z_closed_eyes'),
-                        os.path.join(root_folder, 'z_noface'),
-                        os.path.join(root_folder, 'z_zoomface')]
+                        os.path.join(root_folder, 'z_nightmisc_girl', '1person')]
     for folder in folders_to_clean:
         if os.path.exists(folder):
             for file in os.listdir(folder):
@@ -94,7 +91,7 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
             os.makedirs(character_folder)
         character_folders[character] = character_folder
 
-    # Création des dossiers globaux et de classement
+    # Création des dossiers globaux de classement
     zboy_folder = os.path.join(root_folder, 'zboy')
     os.makedirs(zboy_folder, exist_ok=True)
     zboy_1person_folder = os.path.join(zboy_folder, '1person')
@@ -118,29 +115,6 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
 
     z_background_folder = os.path.join(root_folder, 'z_background')
     os.makedirs(z_background_folder, exist_ok=True)
-
-    # Dossier pour les yeux fermés
-    z_closed_eyes_folder = os.path.join(root_folder, 'z_closed_eyes')
-    os.makedirs(z_closed_eyes_folder, exist_ok=True)
-
-    # Dossiers pour les cas liés au visage
-    z_noface_folder = os.path.join(root_folder, 'z_noface')
-    os.makedirs(z_noface_folder, exist_ok=True)
-    z_zoomface_folder = os.path.join(root_folder, 'z_zoomface')
-    os.makedirs(z_zoomface_folder, exist_ok=True)
-
-    # Définition des tags par genre
-    girl_tags = {
-        '1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl',
-        'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman',
-        'policewoman', 'woman'
-    }
-    boy_tags = {
-        '1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys', 'fat_man', 'old_man',
-        'salaryman', 'ugly_man', 'man'
-    }
-    person_tags = girl_tags.union(boy_tags).union({'solo', 'multiple_persons', 'group'})
-    one_person_tags = {'solo'}
 
     width, height = model.input_shape[2], model.input_shape[1]
     per_image_size = width * height * 3 * 2  # float32, 3 canaux, 2 bytes par valeur
@@ -192,30 +166,36 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                     new_filename = f"{subfolder_name}_{os.path.basename(image_path_str)}"
                     has_one_person = 'solo' in predicted_tags_set
 
-                    # 1. Cas des yeux fermés
+                    # 1. Cas des yeux fermés -> suppression directe
                     if has_one_person and 'closed_eyes' in predicted_tags_set:
-                        destination_path = os.path.join(z_closed_eyes_folder, new_filename)
-                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
-                        print(f"L'image '{image_path_str}' a été classée dans 'z_closed_eyes'")
+                        try:
+                            os.remove(image_path_str)
+                            print(f"L'image '{image_path_str}' a été supprimée (closed_eyes).")
+                        except Exception as e:
+                            print(f"Erreur lors de la suppression de l'image '{image_path_str}': {e}")
                         continue
 
-                    # 2. Cas extreme_closeup
+                    # 2. Cas extreme_closeup -> suppression directe
                     if has_one_person and 'extreme_closeup' in predicted_tags_set:
-                        destination_path = os.path.join(z_zoomface_folder, new_filename)
-                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
-                        print(f"L'image '{image_path_str}' a été classée dans 'z_zoomface'")
+                        try:
+                            os.remove(image_path_str)
+                            print(f"L'image '{image_path_str}' a été supprimée (extreme_closeup).")
+                        except Exception as e:
+                            print(f"Erreur lors de la suppression de l'image '{image_path_str}': {e}")
                         continue
 
-                    # 3. Cas faceless
+                    # 3. Cas faceless -> suppression directe
                     if has_one_person and 'faceless' in predicted_tags_set:
-                        destination_path = os.path.join(z_noface_folder, new_filename)
-                        copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
-                        print(f"L'image '{image_path_str}' a été classée dans 'z_noface'")
+                        try:
+                            os.remove(image_path_str)
+                            print(f"L'image '{image_path_str}' a été supprimée (faceless).")
+                        except Exception as e:
+                            print(f"Erreur lors de la suppression de l'image '{image_path_str}': {e}")
                         continue
 
                     # 4. Cas de l'image de nuit
                     if is_night:
-                        if any(tag in predicted_tags_set for tag in girl_tags):
+                        if any(tag in predicted_tags_set for tag in predicted_tags_set.intersection({'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl', 'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman', 'policewoman', 'woman'})):
                             if has_one_person:
                                 destination_path = os.path.join(z_nightmisc_girl_1person_folder, new_filename)
                                 print(f"L'image '{image_path_str}' a été classée dans 'z_nightmisc_girl/1person'")
@@ -231,6 +211,9 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                             continue
 
                     # 5. Cas des filles (jour)
+                    girl_tags = {'1girl', '2girls', '3girls', '4girls', '5girls', '6+girls', 'multiple_girls', 'tomboy', 'demon_girl',
+                                 'fox_girl', 'fish_girl', 'arthropod_girl', 'lion_girl', 'tiger_girl', 'lamia_girl', 'old_woman',
+                                 'policewoman', 'woman'}
                     if any(tag in predicted_tags_set for tag in girl_tags):
                         # Vérifier les correspondances avec les personnages dans l'ordre
                         classified = False
@@ -258,6 +241,8 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                         continue
 
                     # 6. Cas des garçons (jour)
+                    boy_tags = {'1boy', '2boys', '3boys', '4boys', '5boys', '6+boys', 'multiple_boys', 'fat_man', 'old_man',
+                                'salaryman', 'ugly_man', 'man'}
                     if any(tag in predicted_tags_set for tag in boy_tags):
                         if has_one_person:
                             destination_path = os.path.join(zboy_1person_folder, new_filename)
@@ -269,6 +254,7 @@ def process_subfolder(subfolder_path, root_folder, characters, model, tags_dict,
                         continue
 
                     # 7. Cas générique de personnes (jour)
+                    person_tags = girl_tags.union(boy_tags).union({'solo', 'multiple_persons', 'group'})
                     if any(tag in predicted_tags_set for tag in person_tags):
                         destination_path = os.path.join(z_daymisc_folder, new_filename)
                         copy_executor.submit(shutil.copy2, image_path_str, destination_path).result()
@@ -294,8 +280,7 @@ def process_all_subfolders(root_folder, characters, model, tags_dict, params):
     for subfolder in subfolders:
         if os.path.basename(subfolder) in list(characters.keys()) + [
             'zboy', 'z_daymisc', 'z_nightmisc',
-            'z_daymisc_girl', 'z_nightmisc_girl', 'z_background',
-            'z_closed_eyes', 'z_noface', 'z_zoomface'
+            'z_daymisc_girl', 'z_nightmisc_girl', 'z_background'
         ]:
             continue
         process_subfolder(subfolder, root_folder, characters, model, tags_dict, params)
