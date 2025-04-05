@@ -217,9 +217,6 @@ def process_caption_txt_with_openai(base_directory):
         print(f"Erreur lors de l'ouverture du fichier {output_file} : {e}")
         return
 
-    print("Attente de 1 secondes avant de débuter l'appel à l'API OpenAI...")
-    time.sleep(1)
-
     for txt_file in txt_files:
         try:
             with open(txt_file, "r", encoding="utf-8") as f:

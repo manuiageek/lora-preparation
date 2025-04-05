@@ -5,7 +5,7 @@ from datetime import datetime
 scripts = [
     "1_rename_mkv.py",
     "2_ffmpeg_extr_jpg.py",
-    "3_delete_duplicate_images.py",
+    "3_delete_duplicate_images.py"
     "4_PT_detect_person_or_delete.py"
 ]
 

@@ -11,7 +11,7 @@ import argparse
 # Configuration centrale des paramètres
 device_type = 'gpu'  # Définir 'cpu' ou 'gpu' selon vos besoins
 num_processes = 16   # Nombre de cœurs CPU pour le chargement des images
-batch_size_gpu = 10  # Taille de lot pour le GPU
+batch_size_gpu = 15  # Taille de lot pour le GPU
 batch_size_cpu = num_processes  # Taille de lot pour le CPU
 pool_size = 1000  # Taille du pool d'images
 
@@ -58,7 +58,7 @@ def process_batch(images_batch, paths_batch, model, device_type='gpu'):
     try:
         device_local = 'cuda' if device_type == 'gpu' and torch.cuda.is_available() else 'cpu'
         model.to(device_local)  # Envoyer le modèle sur le périphérique sélectionné
-        
+
         if device_local == 'cuda':
             autocast_context = torch.amp.autocast('cuda')
         else:
@@ -87,34 +87,46 @@ def process_batch(images_batch, paths_batch, model, device_type='gpu'):
         print("Mémoire GPU insuffisante, basculement vers le CPU.")
         process_batch(images_batch, paths_batch, model, 'cpu')  # Retenter le traitement sur le CPU
 
-# Générateur pour charger les images par lot
-def image_generator(subfolder, pool_size):
+# Générateur récursif pour charger les images de tous les sous-dossiers
+def recursive_image_generator(directory, pool_size):
     with ThreadPoolExecutor(max_workers=num_processes) as executor:
         futures = []
-        for filename in os.listdir(subfolder):
-            if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-                image_path = os.path.join(subfolder, filename)
-                futures.append(executor.submit(load_and_resize_image, image_path))
-                if len(futures) >= pool_size:
-                    for future in futures:
-                        img_resized, image_path = future.result()
-                        if img_resized is not None:
-                            yield img_resized, image_path
-                    futures = []
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                    image_path = os.path.join(root, file)
+                    futures.append(executor.submit(load_and_resize_image, image_path))
+                    if len(futures) >= pool_size:
+                        for future in futures:
+                            img_resized, image_path = future.result()
+                            if img_resized is not None:
+                                yield img_resized, image_path
+                        futures = []
         # Traiter les images restantes
         for future in futures:
             img_resized, image_path = future.result()
             if img_resized is not None:
                 yield img_resized, image_path
 
-# Fonction pour traiter un sous-dossier complet en parallèle (redimensionnement sur CPU)
-def process_subfolder(subfolder, batch_size, model, device_type='gpu', num_processes=12, pool_size=1000):
+if __name__ == '__main__':
+    # Ajout de l'argument parser pour récupérer le répertoire passé en paramètre
+    parser = argparse.ArgumentParser(description="Détection d'anime face et suppression des images vides en parcourant TOUS les sous-dossiers")
+    parser.add_argument("--directory", 
+            type=str, 
+            default=r"T:\_SELECT\_READY\HYAKKANO", 
+            help="Répertoire à traiter (par défaut 'repertoire_images')")
+    args = parser.parse_args()
+
+    # On récupère le répertoire depuis l'argument --directory
+    base_folder = args.directory
+
+    # Traitement de toutes les images dans TOUS les sous-dossiers du répertoire assigné
     images_batch = []
     paths_batch = []
-    
-    gen = image_generator(subfolder, pool_size)
-    
-    for img, image_path in gen:
+
+    print(f"Début du traitement récursif dans le répertoire : {base_folder}")
+
+    for img, image_path in recursive_image_generator(base_folder, pool_size):
         images_batch.append(img)
         paths_batch.append(image_path)
 
@@ -122,32 +134,9 @@ def process_subfolder(subfolder, batch_size, model, device_type='gpu', num_proce
             process_batch(images_batch, paths_batch, model, device_type)
             images_batch = []
             paths_batch = []
-    
-    # Traiter les images restantes dans le sous-dossier
+
+    # Traiter les images restantes
     if images_batch:
         process_batch(images_batch, paths_batch, model, device_type)
 
-if __name__ == '__main__':
-    # Ajout de l'argument parser pour récupérer le répertoire passé en paramètre
-    parser = argparse.ArgumentParser(description="Détection d'anime face et suppression des images vides")
-    parser.add_argument("--directory", type=str, required=True, help="Répertoire à traiter")
-    args = parser.parse_args()
-
-    # On récupère le répertoire depuis l'argument --directory
-    base_folder = args.directory
-
-    # Parcourir uniquement les sous-dossiers de `base_folder` dans un ordre croissant
-    for subdir in sorted(os.listdir(base_folder)):
-        subfolder_path = os.path.join(base_folder, subdir)
-        if os.path.isdir(subfolder_path):
-            print(f"Chargement et traitement du sous-dossier : {subfolder_path}")
-            process_subfolder(
-                subfolder_path,
-                batch_size,
-                model,
-                device_type=device_type,
-                num_processes=num_processes,
-                pool_size=pool_size
-            )
-            print(f"Traitement du sous-dossier {subfolder_path} terminé.")
-            print(f"Terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Traitement terminé le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
