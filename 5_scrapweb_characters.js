@@ -37,10 +37,12 @@ async function downloadImage(url, filePath) {
 }
 
 (async () => {
-  // Demande interactive de l'URL de la page listant les personnages
-  const urlInput = await askQuestion(
-    "Veuillez entrer l'URL Character MyAnimeList à scraper : "
-  );
+  // Récupère l'argument passé en ligne de commande si disponible
+  let urlInput = process.argv[2];
+  if (!urlInput) {
+    // Si aucun argument n'est passé, on demande interactivement l'URL
+    urlInput = await askQuestion("Veuillez entrer l'URL Character MyAnimeList à scraper : ");
+  }
   let url = urlInput.trim();
   if (!url) {
     console.error("Aucune URL saisie. Fin du script.");
@@ -49,7 +51,7 @@ async function downloadImage(url, filePath) {
 
   // Vérifie si l'URL se termine par "/characters" ou "/characters/". Sinon, l'ajoute.
   if (!url.match(/\/characters\/?$/)) {
-    url = url.replace(/\/+$/, ""); // Supprime les slashs en fin d'URL le cas échéant
+    url = url.replace(/\/+$/, ""); // Supprime les slashs en fin d'URL si présents
     url += "/characters";
   }
 
@@ -59,7 +61,7 @@ async function downloadImage(url, filePath) {
   const parts = urlObj.pathname.split("/").filter(Boolean); // ["anime", "40128", "Arte", "characters"]
   // Supposons que le nom à utiliser est le troisième segment (index 2) s'il est disponible
   const baseFolderName = parts.length >= 3 ? parts[2] : "default";
-  // Dossier de destination pour les images (changement : "images" devient "images_web")
+  // Dossier de destination pour les images (note : "images" est remplacé par "images_web")
   const baseDirPath = path.join("images_web", baseFolderName);
   // Assurez-vous que le dossier de base existe
   fs.mkdirSync(baseDirPath, { recursive: true });
@@ -82,9 +84,7 @@ async function downloadImage(url, filePath) {
     // Accès à la page et attente des éléments contenant les noms de personnages
     await page.goto(url, { waitUntil: "networkidle2" });
     await page.waitForSelector("h3.h3_character_name", { timeout: 10000 });
-    console.log(
-      "La page des personnages est chargée, début de l'extraction des liens..."
-    );
+    console.log("La page des personnages est chargée, début de l'extraction des liens...");
 
     // Extraction de tous les liens vers les pages de détails des personnages
     const characterLinks = await page.evaluate(() => {
@@ -103,9 +103,7 @@ async function downloadImage(url, filePath) {
     // Itération sur chaque lien de personnage
     for (let i = 0; i < totalCharacters; i++) {
       const link = characterLinks[i];
-      console.log(
-        `Traitement du personnage ${i + 1}/${totalCharacters} : ${link}`
-      );
+      console.log(`Traitement du personnage ${i + 1}/${totalCharacters} : ${link}`);
 
       // Extraction du nom (dernier segment de l'URL)
       const urlName = link.split("/").pop();
@@ -116,9 +114,7 @@ async function downloadImage(url, filePath) {
 
       // Si le dossier existe et qu'il contient déjà au moins un fichier, on passe ce personnage
       if (fs.existsSync(dirPath) && fs.readdirSync(dirPath).length > 0) {
-        console.log(
-          `Le personnage ${name} a déjà été traité (dossier non vide). Passage au suivant.`
-        );
+        console.log(`Le personnage ${name} a déjà été traité (dossier non vide). Passage au suivant.`);
         continue;
       }
 
@@ -155,7 +151,7 @@ async function downloadImage(url, filePath) {
         console.log("URL de l'image :", imageUrl);
 
         if (imageUrl) {
-          // Détermination du nom de fichier à partir de l'URL de l'image (suppression de potentiels paramètres)
+          // Détermination du nom de fichier à partir de l'URL de l'image (suppression des paramètres éventuels)
           const fileName = path.basename(imageUrl.split("?")[0]);
           const filePath = path.join(dirPath, fileName);
 
@@ -164,10 +160,7 @@ async function downloadImage(url, filePath) {
             await downloadImage(imageUrl, filePath);
             console.log("Téléchargement réussi !");
           } catch (downloadError) {
-            console.error(
-              "Erreur lors du téléchargement de l'image :",
-              downloadError
-            );
+            console.error("Erreur lors du téléchargement de l'image :", downloadError);
           }
         } else {
           console.log(`Aucune URL d'image trouvée pour ${name}.`);

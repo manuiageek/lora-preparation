@@ -159,12 +159,18 @@ def process_images():
     dans chacun de ses sous-dossiers, les images.
     Pour chaque image, appelle l'API ComfyUI et affiche la réponse.
     Renvoie le dossier de base utilisé pour pouvoir le réutiliser ensuite.
+    
+    Si un argument est fourni en paramètre (lors de l'appel du script),
+    le script ne redemande pas le dossier en mode interactif.
     """
-    BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base pour le traitement des images : ").strip()
-
-    while not (BASE_DIR and os.path.isdir(BASE_DIR)):
-        print("Vous devez saisir un chemin valide vers un dossier existant.")
+    if len(sys.argv) > 1 and os.path.isdir(sys.argv[1]):
+        BASE_DIR = sys.argv[1]
+        print(f"Dossier fourni en paramètre : {BASE_DIR}")
+    else:
         BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base pour le traitement des images : ").strip()
+        while not (BASE_DIR and os.path.isdir(BASE_DIR)):
+            print("Vous devez saisir un chemin valide vers un dossier existant.")
+            BASE_DIR = input("Veuillez entrer le chemin complet du dossier de base pour le traitement des images : ").strip()
 
     try:
         with open(WORKFLOW_FILE, "r", encoding="utf-8") as f:
@@ -194,8 +200,15 @@ def process_caption_txt_with_openai(base_directory):
         '1er keyword':['keyword1','keyword2',...],
     et écrit ce résultat dans un fichier CSV.
     Le fichier CSV est enregistré dans le répertoire "./chartags".
+
+    Avant de traiter les fichiers, on rescrute les dossiers pour être sûr 
+    de prendre en compte les fichiers txt qui ont pu être créés durant le traitement.
     """
+    # Pause pour laisser le temps aux fichiers txt d'être créés
+    time.sleep(3)
+    # Rafraîchissement de la lecture des fichiers .txt
     txt_files = list_txt_files_from_subfolders(base_directory)
+   
     try:
         with open("open_configkey.txt", "r", encoding="utf-8") as key_file:
             openaikey = key_file.read().strip()
