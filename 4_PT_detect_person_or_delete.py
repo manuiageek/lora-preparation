@@ -113,7 +113,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Détection d'anime face et suppression des images vides en parcourant TOUS les sous-dossiers")
     parser.add_argument("--directory", 
             type=str, 
-            default=r"T:\_SELECT\_READY\HYAKKANO", 
+            default=r"T:\_SELECT\_READY\KOWLOON GENERIC ROMANCE", 
             help="Répertoire à traiter (par défaut 'repertoire_images')")
     args = parser.parse_args()
 
