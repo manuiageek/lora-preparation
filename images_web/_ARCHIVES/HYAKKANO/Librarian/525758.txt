@@ -1,0 +1,1 @@
+Librarian,short_hair, blue_eyes, brown_hair, purple_eyes, glasses, indoors, sweater, turtleneck, blue_shirt, light_smile, semi-rimless_eyewear, red-framed_eyewear, turtleneck_sweater, under-rim_eyewear, folded_ponytail, id_card, blue_sweater, lanyard
