@@ -34,7 +34,6 @@ build/
 models/
 
 # Ingorer les fichiers 
-TODO.txt
 open_configkey.txt
 image_hashes_cache.pkl
 tags-general.txt
