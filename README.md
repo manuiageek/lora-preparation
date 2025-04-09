@@ -22,6 +22,5 @@ python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU')
 
 ### NODEJS :
 
-npm init -y
-npm install puppeteer
-npm install node-fetch
+package.json already exists : 
+npm install
