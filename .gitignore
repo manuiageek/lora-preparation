@@ -27,8 +27,9 @@ build/
 # Ignorer les fichiers de tests locaux
 .coverage
 
-# Ignorer le dossier 
+# Ignorer les dossier 
 /node_modules/
+images_web/
 
 # Ignorer les fichiers models
 models/

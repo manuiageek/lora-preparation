@@ -1,1 +1,0 @@
-Shader,open_mouth, short_hair, long_sleeves, animal_ears, jewelry, brown_eyes, green_hair, glasses, fang, cat_ears, necklace, sweater, clothing_cutout, turtleneck, facial_mark, cleavage_cutout, pendant, ribbed_sweater, forehead_mark, lab_coat, pince-nez
