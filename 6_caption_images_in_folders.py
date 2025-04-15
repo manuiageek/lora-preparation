@@ -41,7 +41,7 @@ def call_llm(user_keywords, openai_client):
         try:
             print(f"Tentative {attempt}/{max_retries} pour appeler OpenAI LLM...")
             completion = openai_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4.1-nano",
                 messages=[
                     {"role": "system", "content": pre_prompt},
                     {"role": "user", "content": user_keywords}
