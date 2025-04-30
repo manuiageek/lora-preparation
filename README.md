@@ -28,3 +28,4 @@ npm install
 ## DeepDanbooru link :
 
 https://github.com/KichangKim/DeepDanbooru/releases
+https://huggingface.co/datasets/nyanko7/danbooru2023
