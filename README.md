@@ -22,5 +22,9 @@ python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU')
 
 ### NODEJS :
 
-package.json already exists : 
+package.json already exists :
 npm install
+
+## DeepDanbooru link :
+
+https://github.com/KichangKim/DeepDanbooru/releases
