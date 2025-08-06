@@ -129,6 +129,13 @@ def hybrid_dedupe(images: list[Path], cache: TurboCache) -> None:
     """Approche hybride: taille exacte + fenêtre de hash."""
     removed = 0
     
+    # Statistiques par dossier
+    folder_stats = defaultdict(int)
+    for img in images:
+        folder_stats[img.parent.name] += 1
+    
+    logging.info(f"Images par dossier: {dict(folder_stats)}")
+
     # Étape 1: Groupement par taille exacte (très rapide)
     size_groups = defaultdict(list)
     for img in images:
@@ -201,7 +208,7 @@ def hybrid_dedupe(images: list[Path], cache: TurboCache) -> None:
                     try:
                         dup.unlink()
                         removed += 1
-                        logging.info(f"Supprimé {dup.name} (doublon de {duplicates[0].name})")
+                        logging.info(f"Supprimé {dup.parent.name}/{dup.name} (doublon de {duplicates[0].parent.name}/{duplicates[0].name})")
                     except Exception as e:
                         logging.error(f"Échec suppression {dup}: {e}")
     
@@ -211,7 +218,7 @@ def hybrid_dedupe(images: list[Path], cache: TurboCache) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Dédoublonneur hybride d'images")
     parser.add_argument("--directory", type=Path, 
-                       default=Path(r"T:\_SELECT\TODO\Kanpekiseijo\01"),
+                       default=Path(r"T:\_SELECT\TODO\Kanpekiseijo"),
                        help="Répertoire à analyser")
     parser.add_argument("--clear-cache", action="store_true", 
                        help="Efface le cache avant de commencer")
