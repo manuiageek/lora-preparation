@@ -211,7 +211,7 @@ def hybrid_dedupe(images: list[Path], cache: TurboCache) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Dédoublonneur hybride d'images")
     parser.add_argument("--directory", type=Path, 
-                       default=Path(r"T:\_SELECT\TODO\Kanpekiseijo\02"),
+                       default=Path(r"T:\_SELECT\TODO\Kanpekiseijo\01"),
                        help="Répertoire à analyser")
     parser.add_argument("--clear-cache", action="store_true", 
                        help="Efface le cache avant de commencer")
