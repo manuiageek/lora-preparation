@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Détecteur/suppresseur de doublons d'images ultra-optimisé."""
+"""Détecteur/suppresseur de doublons d'images ultra-optimisé pour CPU haute performance."""
 
 from __future__ import annotations
 
@@ -11,26 +11,27 @@ from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 import lz4.frame  # compression ultra-rapide
 
 import imagehash
 from PIL import Image
 
-# Configuration équilibrée vitesse/précision
+# Configuration optimisée mais stable
 HASH_SIZE = 16  # Précision originale
 SIZE_WINDOW = 1024 * 50  # Fenêtre large pour précision
 THRESHOLD = 1  # Seuil strict comme l'original
 CACHE_FILE = Path("image_hashes_cache.lz4")
-WORKERS = (os.cpu_count() or 1) * 2
-CACHE_VERSION = "v2"  # Version pour invalider les anciens caches
+# Configuration stable pour 5950X
+WORKERS = os.cpu_count() * 2  # 64 workers avec ThreadPoolExecutor seulement
+BATCH_SIZE = 1000  # Batches plus petits mais nombreux
+CACHE_VERSION = "v5"  # Version pour invalider les anciens caches
 
 
 def compute_hash_precise(path: Path) -> tuple[Path, imagehash.ImageHash] | None:
     """Hash précis avec average_hash optimisé."""
     try:
         with Image.open(path) as img:
-            # average_hash pour meilleure précision
             h = imagehash.average_hash(img, hash_size=HASH_SIZE)
             return path, h
     except Exception as e:
@@ -42,8 +43,8 @@ class TurboCache:
     """Cache compressé en mémoire avec chargement lazy."""
     
     def __init__(self) -> None:
-        self.data: Dict[str, str] = {}  # path_str -> hash_str (pour sérialisation)
-        self.stats: Dict[str, float] = {}  # path_str -> mtime
+        self.data: Dict[str, str] = {}
+        self.stats: Dict[str, float] = {}
         self.version: str = CACHE_VERSION
         self._load_async()
     
@@ -57,7 +58,6 @@ class TurboCache:
             if compressed:
                 data = pickle.loads(lz4.frame.decompress(compressed))
                 
-                # Vérifier la version du cache
                 if data.get('version') != CACHE_VERSION:
                     logging.info("Version de cache obsolète, reconstruction nécessaire")
                     return
@@ -93,29 +93,22 @@ class TurboCache:
             return False
     
     def get_or_compute(self, path: Path) -> imagehash.ImageHash | None:
-        """Récupère ou calcule le hash d'une image."""
+        """Récupère ou calcule le hash d'une image (version simple)."""
         path_str = str(path)
         
         # Vérifier le cache
         if self.is_fresh(path):
             try:
-                # Reconstruire l'objet ImageHash depuis la string
                 hash_obj = imagehash.hex_to_hash(self.data[path_str])
-                
-                # Vérifier que la forme du hash est correcte
                 if hash_obj.hash.shape == (HASH_SIZE, HASH_SIZE):
                     return hash_obj
-                else:
-                    # Hash de forme incorrecte, le recalculer
-                    logging.debug(f"Hash de forme incorrecte pour {path}: {hash_obj.hash.shape}")
             except Exception:
-                # Cache corrompu pour cette entrée
                 pass
         
         # Calculer le nouveau hash
         if result := compute_hash_precise(path):
             _, hash_obj = result
-            self.data[path_str] = str(hash_obj)  # Stocker comme string
+            self.data[path_str] = str(hash_obj)
             try:
                 self.stats[path_str] = path.stat().st_mtime
             except Exception:
@@ -125,8 +118,53 @@ class TurboCache:
         return None
 
 
-def hybrid_dedupe(images: list[Path], cache: TurboCache) -> None:
-    """Approche hybride: taille exacte + fenêtre de hash."""
+def process_group(group: List[Path], cache: TurboCache) -> int:
+    """Traite un groupe d'images candidats."""
+    if len(group) < 2:
+        return 0
+    
+    # Hash du groupe avec ThreadPoolExecutor simple et stable
+    with ThreadPoolExecutor(max_workers=min(32, len(group))) as pool:
+        hash_results = list(pool.map(cache.get_or_compute, group))
+    
+    # Détection des doublons
+    removed = 0
+    processed = set()
+    
+    for j, (path_a, hash_a) in enumerate(zip(group, hash_results)):
+        if not hash_a or path_a in processed:
+            continue
+            
+        duplicates = [path_a]
+        
+        for k, (path_b, hash_b) in enumerate(zip(group, hash_results)):
+            if (k <= j or not hash_b or path_b in processed):
+                continue
+            
+            try:
+                if (hash_a.hash.shape == hash_b.hash.shape and 
+                    (hash_a - hash_b) <= THRESHOLD):
+                    duplicates.append(path_b)
+                    processed.add(path_b)
+            except Exception:
+                continue
+        
+        # Suppression des doublons
+        if len(duplicates) > 1:
+            duplicates.sort(key=lambda p: p.name)
+            for dup in duplicates[1:]:
+                try:
+                    dup.unlink()
+                    removed += 1
+                    logging.info(f"Supprimé {dup.parent.name}/{dup.name} (doublon de {duplicates[0].parent.name}/{duplicates[0].name})")
+                except Exception as e:
+                    logging.error(f"Échec suppression {dup}: {e}")
+    
+    return removed
+
+
+def stable_dedupe(images: list[Path], cache: TurboCache) -> None:
+    """Dédoublonnage stable et rapide pour CPU haute performance."""
     removed = 0
     
     # Statistiques par dossier
@@ -135,8 +173,9 @@ def hybrid_dedupe(images: list[Path], cache: TurboCache) -> None:
         folder_stats[img.parent.name] += 1
     
     logging.info(f"Images par dossier: {dict(folder_stats)}")
+    logging.info(f"Mode stable avec {WORKERS} workers")
 
-    # Étape 1: Groupement par taille exacte (très rapide)
+    # Groupement par taille exacte
     size_groups = defaultdict(list)
     for img in images:
         try:
@@ -146,7 +185,7 @@ def hybrid_dedupe(images: list[Path], cache: TurboCache) -> None:
     
     exact_size_candidates = [group for group in size_groups.values() if len(group) > 1]
     
-    # Étape 2: Pour les images de taille unique, groupement par fenêtre
+    # Groupement par fenêtre pour les images uniques
     single_images = [group[0] for group in size_groups.values() if len(group) == 1]
     window_groups = defaultdict(list)
     for img in single_images:
@@ -166,57 +205,35 @@ def hybrid_dedupe(images: list[Path], cache: TurboCache) -> None:
     
     logging.info(f"{total_candidates} images candidates dans {len(all_candidates)} groupes")
     
-    # Traitement des groupes
-    for i, group in enumerate(all_candidates):
-        if i % 20 == 0:
-            logging.info(f"Progression: {i+1}/{len(all_candidates)} groupes")
+    # Traitement stable par batches
+    batch_count = 0
+    for i in range(0, len(all_candidates), BATCH_SIZE):
+        batch_groups = all_candidates[i:i + BATCH_SIZE]
+        batch_count += 1
         
-        # Hash en parallèle
-        with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-            hash_results = list(pool.map(cache.get_or_compute, group))
+        logging.info(f"Batch {batch_count} - Traitement de {len(batch_groups)} groupes")
         
-        # Regroupement par hash avec comparaison de distance
-        processed = set()
-        for j, (path_a, hash_a) in enumerate(zip(group, hash_results)):
-            if not hash_a or path_a in processed:
-                continue
-                
-            duplicates = [path_a]
+        # Traitement avec ThreadPoolExecutor uniquement (plus stable)
+        with ThreadPoolExecutor(max_workers=WORKERS) as executor:
+            futures = [executor.submit(process_group, group, cache) for group in batch_groups]
             
-            for k, (path_b, hash_b) in enumerate(zip(group, hash_results)):
-                if (k <= j or not hash_b or path_b in processed):
-                    continue
-                
-                # Vérification de sécurité sur la forme des hashs
+            # Collecte des résultats
+            for i, future in enumerate(futures):
                 try:
-                    if (hash_a.hash.shape != hash_b.hash.shape):
-                        logging.warning(f"Formes de hash incompatibles: {hash_a.hash.shape} vs {hash_b.hash.shape}")
-                        continue
+                    group_removed = future.result()
+                    removed += group_removed
                     
-                    # Comparaison avec seuil
-                    if (hash_a - hash_b) <= THRESHOLD:
-                        duplicates.append(path_b)
-                        processed.add(path_b)
+                    if (i + 1) % 100 == 0:
+                        logging.info(f"  Progression: {i+1}/{len(futures)} groupes traités")
+                        
                 except Exception as e:
-                    logging.warning(f"Erreur comparaison hash: {e}")
-                    continue
-            
-            # Suppression des doublons (garde le premier alphabétiquement)
-            if len(duplicates) > 1:
-                duplicates.sort(key=lambda p: p.name)
-                for dup in duplicates[1:]:
-                    try:
-                        dup.unlink()
-                        removed += 1
-                        logging.info(f"Supprimé {dup.parent.name}/{dup.name} (doublon de {duplicates[0].parent.name}/{duplicates[0].name})")
-                    except Exception as e:
-                        logging.error(f"Échec suppression {dup}: {e}")
+                    logging.error(f"Erreur traitement groupe: {e}")
     
-    logging.info(f"{removed} doublons supprimés avec précision")
+    logging.info(f"🚀 {removed} doublons supprimés en mode stable")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Dédoublonneur hybride d'images")
+    parser = argparse.ArgumentParser(description="Dédoublonneur stable haute performance")
     parser.add_argument("--directory", type=Path, 
                        default=Path(r"T:\_SELECT\TODO\Kanpekiseijo"),
                        help="Répertoire à analyser")
@@ -227,7 +244,8 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     start = datetime.now()
     
-    # Option pour effacer le cache
+    logging.info(f"🔥 Mode stable haute-performance - {WORKERS} workers pour 5950X")
+    
     if args.clear_cache and CACHE_FILE.exists():
         CACHE_FILE.unlink()
         logging.info("Cache effacé")
@@ -239,25 +257,24 @@ def main() -> None:
         if (p.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".gif"} and 
             p.is_file()):
             try:
-                if p.stat().st_size > 1024:  # Ignore les très petites images
+                if p.stat().st_size > 1024:
                     images.append(p)
             except Exception:
                 continue
     
     cache = TurboCache()
-    logging.info(f"Analyse de {len(images)} images avec {WORKERS} workers")
+    logging.info(f"🚀 Analyse stable de {len(images)} images")
     
-    hybrid_dedupe(images, cache)
+    stable_dedupe(images, cache)
     
-    # Sauvegarde du cache
     cache.save()
     
     duration = (datetime.now() - start).total_seconds()
     if duration > 0:
         rate = len(images) / duration
-        logging.info(f"Terminé en {duration:.1f}s ({rate:.0f} img/s)")
+        logging.info(f"✅ Terminé en {duration:.1f}s ({rate:.0f} img/s) - Mode stable")
     else:
-        logging.info("Terminé instantanément")
+        logging.info("✅ Terminé instantanément")
 
 
 if __name__ == "__main__":
