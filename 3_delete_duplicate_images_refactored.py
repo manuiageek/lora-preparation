@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Détecteur/suppresseur de doublons d'images ultra-optimisé pour CPU haute performance."""
+"""Détecteur/suppresseur de doublons d'images optimisé anti-freeze."""
 
 from __future__ import annotations
 
@@ -7,25 +7,27 @@ import argparse
 import logging
 import os
 import pickle
-from concurrent.futures import ThreadPoolExecutor
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
-import lz4.frame  # compression ultra-rapide
+import lz4.frame
 
 import imagehash
 from PIL import Image
 
-# Configuration optimisée mais stable
-HASH_SIZE = 16  # Précision originale
-SIZE_WINDOW = 1024 * 50  # Fenêtre large pour précision
-THRESHOLD = 1  # Seuil strict comme l'original
+# Configuration anti-freeze pour Windows
+HASH_SIZE = 16
+SIZE_WINDOW = 1024 * 50
+THRESHOLD = 1
 CACHE_FILE = Path("image_hashes_cache.lz4")
-# Configuration stable pour 5950X
-WORKERS = os.cpu_count() * 4  # 64 workers avec ThreadPoolExecutor seulement
-BATCH_SIZE = 2000  # Batches plus petits mais nombreux
-CACHE_VERSION = "v5"  # Version pour invalider les anciens caches
+# Configuration Windows-friendly
+WORKERS = min(32, os.cpu_count() * 2)  # Limite à 32 workers max
+BATCH_SIZE = 500  # Batches plus petits pour éviter les freeze
+MAX_GROUP_SIZE = 100  # Limite la taille des groupes
+CACHE_VERSION = "v6"
 
 
 def compute_hash_precise(path: Path) -> tuple[Path, imagehash.ImageHash] | None:
@@ -93,7 +95,7 @@ class TurboCache:
             return False
     
     def get_or_compute(self, path: Path) -> imagehash.ImageHash | None:
-        """Récupère ou calcule le hash d'une image (version simple)."""
+        """Récupère ou calcule le hash d'une image."""
         path_str = str(path)
         
         # Vérifier le cache
@@ -118,14 +120,34 @@ class TurboCache:
         return None
 
 
-def process_group(group: List[Path], cache: TurboCache) -> int:
-    """Traite un groupe d'images candidats."""
+def process_group_safe(group: List[Path], cache: TurboCache) -> int:
+    """Traite un groupe d'images de manière sécurisée pour Windows."""
     if len(group) < 2:
         return 0
     
-    # Hash du groupe avec ThreadPoolExecutor simple et stable
-    with ThreadPoolExecutor(max_workers=min(32, len(group))) as pool:
+    # Log pour gros groupes
+    if len(group) > 20:
+        logging.info(f"🔄 Traitement groupe de {len(group)} images...")
+    
+    # Diviser les gros groupes
+    if len(group) > MAX_GROUP_SIZE:
+        logging.info(f"⚠️  Groupe énorme ({len(group)} images), division en sous-groupes")
+        removed = 0
+        for i in range(0, len(group), MAX_GROUP_SIZE):
+            subgroup = group[i:i + MAX_GROUP_SIZE]
+            removed += process_group_safe(subgroup, cache)
+        return removed
+    
+    # Hash avec nombre limité de workers
+    max_workers = min(16, len(group))  # Max 16 workers par groupe
+    
+    start_time = time.time()
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
         hash_results = list(pool.map(cache.get_or_compute, group))
+    hash_time = time.time() - start_time
+    
+    if hash_time > 2:  # Si plus de 2 secondes
+        logging.info(f"⏱️  Hash de {len(group)} images: {hash_time:.1f}s")
     
     # Détection des doublons
     removed = 0
@@ -149,22 +171,31 @@ def process_group(group: List[Path], cache: TurboCache) -> int:
             except Exception:
                 continue
         
-        # Suppression des doublons
+        # Suppression séquentielle pour éviter les conflits Windows
         if len(duplicates) > 1:
             duplicates.sort(key=lambda p: p.name)
+            
+            if len(duplicates) > 10:
+                logging.info(f"🎯 Trouvé {len(duplicates)} doublons de {duplicates[0].name}")
+            
             for dup in duplicates[1:]:
                 try:
                     dup.unlink()
                     removed += 1
                     logging.info(f"Supprimé {dup.parent.name}/{dup.name} (doublon de {duplicates[0].parent.name}/{duplicates[0].name})")
+                    
+                    # Petite pause pour Windows après suppressions multiples
+                    if removed % 50 == 0:
+                        time.sleep(0.01)
+                        
                 except Exception as e:
                     logging.error(f"Échec suppression {dup}: {e}")
     
     return removed
 
 
-def stable_dedupe(images: list[Path], cache: TurboCache) -> None:
-    """Dédoublonnage stable et rapide pour CPU haute performance."""
+def windows_friendly_dedupe(images: list[Path], cache: TurboCache) -> None:
+    """Dédoublonnage optimisé pour Windows."""
     removed = 0
     
     # Statistiques par dossier
@@ -173,7 +204,7 @@ def stable_dedupe(images: list[Path], cache: TurboCache) -> None:
         folder_stats[img.parent.name] += 1
     
     logging.info(f"Images par dossier: {dict(folder_stats)}")
-    logging.info(f"Mode stable avec {WORKERS} workers")
+    logging.info(f"Mode Windows-friendly avec {WORKERS} workers max")
 
     # Groupement par taille exacte
     size_groups = defaultdict(list)
@@ -203,37 +234,42 @@ def stable_dedupe(images: list[Path], cache: TurboCache) -> None:
         logging.info("Aucun doublon potentiel détecté")
         return
     
+    # Trier par taille de groupe (petits d'abord)
+    all_candidates.sort(key=len)
+    
     logging.info(f"{total_candidates} images candidates dans {len(all_candidates)} groupes")
     
-    # Traitement stable par batches
+    # Traitement par batches avec timeout
     batch_count = 0
     for i in range(0, len(all_candidates), BATCH_SIZE):
         batch_groups = all_candidates[i:i + BATCH_SIZE]
         batch_count += 1
         
-        logging.info(f"Batch {batch_count} - Traitement de {len(batch_groups)} groupes")
+        logging.info(f"Batch {batch_count}/{(len(all_candidates) + BATCH_SIZE - 1) // BATCH_SIZE} - {len(batch_groups)} groupes")
         
-        # Traitement avec ThreadPoolExecutor uniquement (plus stable)
+        # Traitement avec timeout et gestion d'erreurs
         with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-            futures = [executor.submit(process_group, group, cache) for group in batch_groups]
+            futures = {executor.submit(process_group_safe, group, cache): group for group in batch_groups}
             
-            # Collecte des résultats
-            for i, future in enumerate(futures):
+            # Collecte avec timeout
+            for future in as_completed(futures, timeout=60):
                 try:
-                    group_removed = future.result()
+                    group_removed = future.result(timeout=30)
                     removed += group_removed
-                    
-                    if (i + 1) % 100 == 0:
-                        logging.info(f"  Progression: {i+1}/{len(futures)} groupes traités")
-                        
                 except Exception as e:
-                    logging.error(f"Erreur traitement groupe: {e}")
+                    group = futures[future]
+                    logging.error(f"Timeout/erreur groupe de {len(group)} images: {e}")
+        
+        # Petite pause entre batches pour laisser Windows respirer
+        if batch_count % 5 == 0:
+            logging.info("😴 Pause technique...")
+            time.sleep(0.5)
     
-    logging.info(f"🚀 {removed} doublons supprimés en mode stable")
+    logging.info(f"🚀 {removed} doublons supprimés (mode Windows-friendly)")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Dédoublonneur stable haute performance")
+    parser = argparse.ArgumentParser(description="Dédoublonneur Windows-friendly")
     parser.add_argument("--directory", type=Path, 
                        default=Path(r"T:\_SELECT\TODO\Kanpekiseijo"),
                        help="Répertoire à analyser")
@@ -244,7 +280,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     start = datetime.now()
     
-    logging.info(f"🔥 Mode stable haute-performance - {WORKERS} workers pour 5950X")
+    logging.info(f"🪟 Mode Windows-friendly - {WORKERS} workers max")
     
     if args.clear_cache and CACHE_FILE.exists():
         CACHE_FILE.unlink()
@@ -263,16 +299,16 @@ def main() -> None:
                 continue
     
     cache = TurboCache()
-    logging.info(f"🚀 Analyse stable de {len(images)} images")
+    logging.info(f"🚀 Analyse Windows-friendly de {len(images)} images")
     
-    stable_dedupe(images, cache)
+    windows_friendly_dedupe(images, cache)
     
     cache.save()
     
     duration = (datetime.now() - start).total_seconds()
     if duration > 0:
         rate = len(images) / duration
-        logging.info(f"✅ Terminé en {duration:.1f}s ({rate:.0f} img/s) - Mode stable")
+        logging.info(f"✅ Terminé en {duration:.1f}s ({rate:.0f} img/s) - Mode Windows")
     else:
         logging.info("✅ Terminé instantanément")
 
