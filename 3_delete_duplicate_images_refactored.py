@@ -23,8 +23,8 @@ SIZE_WINDOW = 1024 * 50  # Fenêtre large pour précision
 THRESHOLD = 1  # Seuil strict comme l'original
 CACHE_FILE = Path("image_hashes_cache.lz4")
 # Configuration stable pour 5950X
-WORKERS = os.cpu_count() * 2  # 64 workers avec ThreadPoolExecutor seulement
-BATCH_SIZE = 1000  # Batches plus petits mais nombreux
+WORKERS = os.cpu_count() * 4  # 64 workers avec ThreadPoolExecutor seulement
+BATCH_SIZE = 2000  # Batches plus petits mais nombreux
 CACHE_VERSION = "v5"  # Version pour invalider les anciens caches
 
 
