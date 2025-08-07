@@ -9,6 +9,8 @@ conda activate ptorch_env
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 pip install numpy opencv-python ultralytics
 
+Exemple : conda run -n ptorch_env python 4_PT_detect_person_or_delete.py
+
 ### TENSORFLOW CONDA GUIDE :
 
 conda create -n tflow_env python=3.10

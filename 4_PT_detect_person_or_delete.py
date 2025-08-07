@@ -12,16 +12,16 @@ import logging
 from collections import deque
 import time
 
-# Configuration du logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configuration logging minimal
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class GPUAnimeDetectionConfig:
     """Configuration centralisée pour traitement GPU exclusif"""
     def __init__(self):
         self.device = self._validate_gpu()
-        self.num_processes = 12
-        self.batch_size = 16  # Optimisé pour RTX 3070
+        self.num_processes = 16
+        self.batch_size = 20  # Optimisé pour RTX 3070
         self.max_batch_size = 24
         self.target_size = (640, 640)
         self.model_path = Path('models') / 'yolov8x6_animeface.pt'
@@ -31,18 +31,10 @@ class GPUAnimeDetectionConfig:
         self.buffer_size = 96
         self.chunk_size = 64
         
-        # Configuration des logs - uniquement suppressions
-        self.log_every_batch = False
-        self.log_every_image = True
-        
     def _validate_gpu(self) -> str:
         """Validation de la disponibilité GPU"""
         if not torch.cuda.is_available():
             raise RuntimeError("GPU non disponible. Ce script nécessite CUDA.")
-        
-        gpu_name = torch.cuda.get_device_name()
-        gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
-        logger.info(f"GPU détecté: {gpu_name} ({gpu_memory:.1f} GB)")
         
         return 'cuda'
 
@@ -70,7 +62,6 @@ class StreamingGPUAnimeDetector:
         model.to(self.config.device)
         model.model.eval()
         
-        logger.info(f"Modèle chargé sur GPU (batch: {self.config.batch_size}, buffer: {self.config.buffer_size})")
         return model
     
     def _optimize_gpu(self):
@@ -79,7 +70,6 @@ class StreamingGPUAnimeDetector:
         torch.backends.cudnn.deterministic = False
         torch.cuda.empty_cache()
         self.cuda_stream = torch.cuda.Stream()
-        logger.info("Optimisations GPU activées")
 
     def load_and_resize_image(self, image_path: str) -> Tuple[Optional[np.ndarray], str]:
         """Chargement optimisé pour pipeline GPU"""
@@ -94,13 +84,10 @@ class StreamingGPUAnimeDetector:
             return img_rgb, image_path
             
         except Exception as e:
-            logger.error(f"Erreur chargement {image_path}: {e}")
             return None, image_path
 
     def process_batch_gpu(self, images_batch: List[np.ndarray], paths_batch: List[str]) -> None:
-        """Traitement GPU avec logs en temps réel"""
-        batch_start = datetime.now()
-        
+        """Traitement GPU silencieux"""
         try:
             with torch.cuda.stream(self.cuda_stream):
                 with torch.amp.autocast('cuda', enabled=True):
@@ -113,32 +100,17 @@ class StreamingGPUAnimeDetector:
             torch.cuda.current_stream().wait_stream(self.cuda_stream)
             self._process_results_vectorized(results, paths_batch)
             
-            # Log de batch en temps réel si activé
-            if self.config.log_every_batch:
-                batch_duration = (datetime.now() - batch_start).total_seconds()
-                speed = len(images_batch) / batch_duration
-                gpu_memory = torch.cuda.memory_allocated() / 1e9
-                progress = (self.stats['processed'] / self.stats['total_files']) * 100 if self.stats['total_files'] > 0 else 0
-                
-                print(f"\nBatch traité: {len(images_batch)} img en {batch_duration:.2f}s ({speed:.1f} img/s) | GPU: {gpu_memory:.1f}GB")
-                print(f"Progress: {progress:.1f}% ({self.stats['processed']}/{self.stats['total_files']}) | Supprimés: {self.stats['deleted']} | Gardés: {self.stats['kept']}")
-            else:
-                # Progress simple si pas de log batch
-                progress = (self.stats['processed'] / self.stats['total_files']) * 100 if self.stats['total_files'] > 0 else 0
-                print(f"\rProgress: {progress:.1f}% | Traités: {self.stats['processed']}/{self.stats['total_files']} | Supprimés: {self.stats['deleted']}", end='', flush=True)
-            
             # Nettoyage mémoire conservateur pour RTX 3070
             if torch.cuda.memory_allocated() > 6e9:
                 torch.cuda.empty_cache()
                 
         except torch.cuda.OutOfMemoryError:
-            logger.warning("OOM GPU - réduction batch")
             self._handle_oom_batch(images_batch, paths_batch)
         except Exception as e:
             logger.error(f"Erreur batch GPU: {e}")
 
     def _process_results_vectorized(self, results, paths_batch: List[str]) -> None:
-        """Traitement vectorisé avec affichage configurable"""
+        """Traitement vectorisé silencieux"""
         for i, result in enumerate(results):
             try:
                 anime_detected = False
@@ -149,29 +121,16 @@ class StreamingGPUAnimeDetector:
                         anime_mask = classes_tensor == self.config.anime_class_id
                         anime_detected = anime_mask.any().item()
 
-                filename = os.path.basename(paths_batch[i])
-                
                 if not anime_detected:
                     self._safe_delete_image(paths_batch[i])
                     self.stats['deleted'] += 1
-                    
-                    # Affichage immédiat des suppressions AVEC FLUSH
-                    if self.config.log_every_image:
-                        print(f"DELETED: {filename}", flush=True)
-                    elif self.config.log_every_batch:
-                        print(f"\nDELETED: {filename}", flush=True)
                 else:
                     self.stats['kept'] += 1
-                    
-                    # Affichage des images gardées si demandé AVEC FLUSH
-                    if self.config.log_every_image:
-                        print(f"KEPT: {filename}", flush=True)
                 
                 self.stats['processed'] += 1
                     
             except Exception as e:
                 self.stats['errors'] += 1
-                logger.error(f"Erreur traitement {paths_batch[i]}: {e}")
 
     def _handle_oom_batch(self, images_batch: List[np.ndarray], paths_batch: List[str]) -> None:
         """Gestion OOM adaptée RTX 3070"""
@@ -198,10 +157,8 @@ class StreamingGPUAnimeDetector:
             logger.error(f"Erreur suppression {image_path}: {e}")
 
     def get_streaming_image_generator(self, directory: str) -> Generator[Tuple[np.ndarray, str], None, None]:
-        """Générateur streaming avec logs simplifiés"""
+        """Générateur streaming silencieux"""
         image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff'}
-        
-        logger.info(f"Scan du répertoire: {directory}")
         
         # Comptage rapide
         total_files = sum(
@@ -210,7 +167,6 @@ class StreamingGPUAnimeDetector:
             if Path(file).suffix.lower() in image_extensions
         )
         self.stats['total_files'] = total_files
-        logger.info(f"Total: {total_files} images trouvées")
         
         # Traitement par chunks streaming
         for root, _, files in os.walk(directory):
@@ -221,10 +177,6 @@ class StreamingGPUAnimeDetector:
             
             if not image_files:
                 continue
-            
-            # Log du dossier en cours si demandé
-            if self.config.log_every_batch:
-                print(f"\nTraitement dossier: {os.path.basename(root)} ({len(image_files)} images)")
             
             # Traiter le dossier par chunks
             for i in range(0, len(image_files), self.config.chunk_size):
@@ -262,7 +214,7 @@ def main():
     parser.add_argument(
         "--directory", 
         type=str, 
-        default=r"T:\_SELECT\TODO\Kanpekiseijo\06", 
+        default=r"T:\_SELECT\TODO\Kanpekiseijo\10", 
         help="Répertoire à traiter"
     )
     parser.add_argument(
@@ -277,12 +229,10 @@ def main():
         return
 
     try:
-        logger.info("Initialisation du détecteur GPU...")
         config = GPUAnimeDetectionConfig()
         
         if args.batch_size:
             config.batch_size = args.batch_size
-            logger.info(f"Batch size forcé: {args.batch_size}")
         
         detector = StreamingGPUAnimeDetector(config)
         
@@ -290,7 +240,6 @@ def main():
         images_batch = []
         paths_batch = []
         
-        logger.info(f"Démarrage traitement: {args.directory}")
         start_time = datetime.now()
         
         # Traitement en flux continu
@@ -323,8 +272,14 @@ def main():
         if hasattr(detector, 'stats'):
             stats = detector.stats
             speed = stats['processed'] / duration.total_seconds() if duration.total_seconds() > 0 else 0
-            print(f"\n\nTERMINÉ en {duration}")
-            print(f"Images traitées: {stats['processed']}/{stats['total_files']}")
+            
+            # Format temps propre
+            hours, remainder = divmod(int(duration.total_seconds()), 3600)
+            minutes, seconds = divmod(remainder, 60)
+            time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            
+            print(f"\n\nTIME {time_str}")
+            print(f"IMAGES DONE: {stats['processed']}/{stats['total_files']}")
             print(f"DELETED : {stats['deleted']}")
             print(f"SPEED: {speed:.1f} img/s")
 
