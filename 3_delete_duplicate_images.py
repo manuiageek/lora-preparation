@@ -1,171 +1,319 @@
-import os
-import psutil
-from PIL import Image
-import imagehash
-from datetime import datetime
-from concurrent.futures import ProcessPoolExecutor
+#!/usr/bin/env python3
+"""Detecteur/suppresseur de doublons d'images optimise anti-freeze."""
+
+from __future__ import annotations
+
 import argparse
+import logging
+import os
 import pickle
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List
+import lz4.frame
 
-# Constantes globales pour le contrôle des valeurs
-HASH_SIZE = 16  # Contrôle la précision du hachage perceptuel
-THRESHOLD = 1   # Contrôle la tolérance pour considérer deux images comme doublons
-SIZE_THRESHOLD = 1024 * 50  # Taille en octets pour la fenêtre glissante (50 Ko)
-CACHE_FILE = r'image_hashes_cache.pkl'  # Fichier pour stocker le cache des hachages
+import imagehash
+from PIL import Image
 
-def set_cpu_affinity():
-    p = psutil.Process()  # Obtenir le processus actuel
+# Configuration anti-freeze pour Windows
+HASH_SIZE = 16
+SIZE_WINDOW = 1024 * 50
+THRESHOLD = 1
+CACHE_FILE = Path("image_hashes_cache.lz4")
+# Configuration Windows-friendly
+WORKERS = min(32, os.cpu_count() * 2)  # Limite a 32 workers max
+BATCH_SIZE = 500  # Batches plus petits pour eviter les freeze
+MAX_GROUP_SIZE = 100  # Limite la taille des groupes
+CACHE_VERSION = "v6"
 
-    # Définissez le nombre de processus ici
-    num_processes = 16  # Modifiez cette valeur selon vos besoins
-
-    # Définir l'affinité des cœurs CPU en fonction de num_processes
-    if num_processes == 8:
-        # Utilisation des cœurs physiques 0 à 3, et SMT 17 à 20 (en évitant 16)
-        cores = [0, 1, 2, 3, 17, 18, 19, 20]
-    elif num_processes == 16:
-        # Utiliser les 8 cœurs physiques (0 à 7) et leurs SMT (16 à 23)
-        cores = [i for i in range(8)] + [i + 16 for i in range(8)]
-    elif num_processes == 24:
-        # Utiliser les 12 cœurs physiques (0 à 11) et leurs SMT (16 à 27)
-        cores = [i for i in range(12)] + [i + 16 for i in range(12)]
-    else:
-        # Si aucun des cas ne correspond, utiliser tous les cœurs disponibles
-        cores = list(range(psutil.cpu_count()))
-    
-    p.cpu_affinity(cores)
-    print(f"Affinité des cœurs CPU définie sur : {cores}")
-
-    return num_processes
-
-def compute_image_hash(image_path):
-    """Calcule le hachage perceptuel d'une image."""
+def compute_hash_precise(path: Path) -> tuple[Path, imagehash.ImageHash] | None:
+    """Hash precise avec average_hash optimise."""
     try:
-        img_hash = imagehash.average_hash(Image.open(image_path), hash_size=HASH_SIZE)
-        return (image_path, img_hash)
+        with Image.open(path) as img:
+            h = imagehash.average_hash(img, hash_size=HASH_SIZE)
+            return path, h
     except Exception as e:
-        print(f"Erreur lors du traitement de l'image {image_path}: {e}")
+        logging.warning(f"Erreur {path}: {e}")
         return None
 
-def load_hash_cache():
-    """Charge le cache des hachages depuis le fichier."""
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, 'rb') as f:
-            return pickle.load(f)
+class TurboCache:
+    """Cache compresse en memoire avec chargement lazy."""
+    
+    def __init__(self) -> None:
+        self.data: Dict[str, str] = {}
+        self.stats: Dict[str, float] = {}
+        self.version: str = CACHE_VERSION
+        self._load_async()
+    
+    def _load_async(self) -> None:
+        """Chargement asynchrone du cache."""
+        if not CACHE_FILE.exists():
+            return
+        try:
+            with CACHE_FILE.open("rb") as f:
+                compressed = f.read()
+            if compressed:
+                data = pickle.loads(lz4.frame.decompress(compressed))
+                
+                if data.get('version') != CACHE_VERSION:
+                    logging.info("Version de cache obsolete, reconstruction necessaire")
+                    return
+                
+                self.data = data.get('hashes', {})
+                self.stats = data.get('stats', {})
+                logging.info(f"Cache charge: {len(self.data)} entrees")
+        except Exception as e:
+            logging.warning(f"Erreur chargement cache: {e}")
+    
+    def save(self) -> None:
+        """Sauvegarde compressee ultra-rapide."""
+        try:
+            data = {
+                'version': self.version,
+                'hashes': self.data, 
+                'stats': self.stats
+            }
+            compressed = lz4.frame.compress(pickle.dumps(data))
+            CACHE_FILE.write_bytes(compressed)
+            logging.info(f"Cache sauve: {len(self.data)} entrees")
+        except Exception as e:
+            logging.error(f"Erreur sauvegarde cache: {e}")
+    
+    def is_fresh(self, path: Path) -> bool:
+        """Verifie si le hash est encore valide."""
+        path_str = str(path)
+        try:
+            return (path_str in self.data and 
+                    path_str in self.stats and 
+                    self.stats[path_str] == path.stat().st_mtime)
+        except Exception:
+            return False
+    
+    def get_or_compute(self, path: Path) -> imagehash.ImageHash | None:
+        """Recupere ou calcule le hash d'une image."""
+        path_str = str(path)
+        
+        # Verifier le cache
+        if self.is_fresh(path):
+            try:
+                hash_obj = imagehash.hex_to_hash(self.data[path_str])
+                if hash_obj.hash.shape == (HASH_SIZE, HASH_SIZE):
+                    return hash_obj
+            except Exception:
+                pass
+        
+        # Calculer le nouveau hash
+        if result := compute_hash_precise(path):
+            _, hash_obj = result
+            self.data[path_str] = str(hash_obj)
+            try:
+                self.stats[path_str] = path.stat().st_mtime
+            except Exception:
+                pass
+            return hash_obj
+        
+        return None
+
+def process_group_safe(group: List[Path], cache: TurboCache) -> int:
+    """Traite un groupe d'images de maniere securisee pour Windows."""
+    if len(group) < 2:
+        return 0
+    
+    # Log pour gros groupes
+    if len(group) > 20:
+        logging.info(f"Traitement groupe de {len(group)} images...")
+    
+    # Diviser les gros groupes
+    if len(group) > MAX_GROUP_SIZE:
+        logging.info(f"Groupe enorme ({len(group)} images), division en sous-groupes")
+        removed = 0
+        for i in range(0, len(group), MAX_GROUP_SIZE):
+            subgroup = group[i:i + MAX_GROUP_SIZE]
+            removed += process_group_safe(subgroup, cache)
+        return removed
+    
+    # Hash avec nombre limite de workers
+    max_workers = min(16, len(group))  # Max 16 workers par groupe
+    
+    start_time = time.time()
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        hash_results = list(pool.map(cache.get_or_compute, group))
+    hash_time = time.time() - start_time
+    
+    if hash_time > 2:  # Si plus de 2 secondes
+        logging.info(f"Hash de {len(group)} images: {hash_time:.1f}s")
+    
+    # Detection des doublons
+    removed = 0
+    processed = set()
+    
+    for j, (path_a, hash_a) in enumerate(zip(group, hash_results)):
+        if not hash_a or path_a in processed:
+            continue
+            
+        duplicates = [path_a]
+        
+        for k, (path_b, hash_b) in enumerate(zip(group, hash_results)):
+            if (k <= j or not hash_b or path_b in processed):
+                continue
+            
+            try:
+                if (hash_a.hash.shape == hash_b.hash.shape and 
+                    (hash_a - hash_b) <= THRESHOLD):
+                    duplicates.append(path_b)
+                    processed.add(path_b)
+            except Exception:
+                continue
+        
+        # Suppression sequentielle pour eviter les conflits Windows
+        if len(duplicates) > 1:
+            duplicates.sort(key=lambda p: p.name)
+            
+            if len(duplicates) > 10:
+                logging.info(f"Trouve {len(duplicates)} doublons de {duplicates[0].name}")
+            
+            for dup in duplicates[1:]:
+                try:
+                    dup.unlink()
+                    removed += 1
+                    logging.info(f"Supprime {dup.parent.name}/{dup.name} (doublon de {duplicates[0].parent.name}/{duplicates[0].name})")
+                    
+                    # Petite pause pour Windows apres suppressions multiples
+                    if removed % 50 == 0:
+                        time.sleep(0.01)
+                        
+                except Exception as e:
+                    logging.error(f"Echec suppression {dup}: {e}")
+    
+    return removed
+
+def windows_friendly_dedupe(images: list[Path], cache: TurboCache) -> None:
+    """Dedoublonnage optimise pour Windows."""
+    removed = 0
+    
+    # Statistiques par dossier
+    folder_stats = defaultdict(int)
+    for img in images:
+        folder_stats[img.parent.name] += 1
+    
+    logging.info(f"Images par dossier: {dict(folder_stats)}")
+    logging.info(f"Mode Windows-friendly avec {WORKERS} workers max")
+
+    # Groupement par taille exacte
+    size_groups = defaultdict(list)
+    for img in images:
+        try:
+            size_groups[img.stat().st_size].append(img)
+        except Exception:
+            continue
+    
+    exact_size_candidates = [group for group in size_groups.values() if len(group) > 1]
+    
+    # Groupement par fenetre pour les images uniques
+    single_images = [group[0] for group in size_groups.values() if len(group) == 1]
+    window_groups = defaultdict(list)
+    for img in single_images:
+        try:
+            window_groups[img.stat().st_size // SIZE_WINDOW].append(img)
+        except Exception:
+            continue
+    
+    window_candidates = [group for group in window_groups.values() if len(group) > 1]
+    
+    all_candidates = exact_size_candidates + window_candidates
+    total_candidates = sum(len(group) for group in all_candidates)
+    
+    if not all_candidates:
+        logging.info("Aucun doublon potentiel detecte")
+        return
+    
+    # Trier par taille de groupe (petits d'abord)
+    all_candidates.sort(key=len)
+    
+    logging.info(f"{total_candidates} images candidates dans {len(all_candidates)} groupes")
+    
+    # Traitement par batches avec timeout
+    batch_count = 0
+    for i in range(0, len(all_candidates), BATCH_SIZE):
+        batch_groups = all_candidates[i:i + BATCH_SIZE]
+        batch_count += 1
+        
+        logging.info(f"Batch {batch_count}/{(len(all_candidates) + BATCH_SIZE - 1) // BATCH_SIZE} - {len(batch_groups)} groupes")
+        
+        # Traitement avec gestion d'erreurs mais sans timeout global
+        with ThreadPoolExecutor(max_workers=WORKERS) as executor:
+            futures = {executor.submit(process_group_safe, group, cache): group for group in batch_groups}
+            
+            # Collecte sans timeout (mais avec timeout individuel)
+            completed = 0
+            for future in as_completed(futures):
+                try:
+                    group_removed = future.result(timeout=300)  # 5 minutes max par groupe
+                    removed += group_removed
+                    completed += 1
+                    
+                    # Progression toutes les 50 taches
+                    if completed % 50 == 0:
+                        logging.info(f"  Progression: {completed}/{len(futures)} groupes traites")
+                        
+                except Exception as e:
+                    group = futures[future]
+                    logging.error(f"Erreur groupe de {len(group)} images: {e}")
+                    completed += 1
+        
+        # Petite pause entre batches pour laisser Windows respirer
+        if batch_count % 3 == 0:  # Pause plus frequente
+            logging.info("Pause technique...")
+            time.sleep(0.2)
+
+    logging.info(f"{removed} doublons supprimes (mode Windows-friendly)")
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Dedoublonneur Windows-friendly")
+    parser.add_argument("--directory", type=Path, 
+                       default=Path(r"T:\_SELECT\TODO\Danjo no Yuujou wa Seiritsu suru"),
+                       help="Repertoire a analyser")
+    parser.add_argument("--clear-cache", action="store_true", 
+                       help="Efface le cache avant de commencer")
+    args = parser.parse_args()
+    
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    start = datetime.now()
+    
+    logging.info(f"Mode Windows-friendly - {WORKERS} workers max")
+    
+    if args.clear_cache and CACHE_FILE.exists():
+        CACHE_FILE.unlink()
+        logging.info("Cache efface")
+    
+    # Collecte des images
+    logging.info("Scan du repertoire...")
+    images = []
+    for p in args.directory.rglob("*"):
+        if (p.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".gif"} and 
+            p.is_file()):
+            try:
+                if p.stat().st_size > 1024:
+                    images.append(p)
+            except Exception:
+                continue
+    
+    cache = TurboCache()
+    logging.info(f"Analyse Windows-friendly de {len(images)} images")
+    
+    windows_friendly_dedupe(images, cache)
+    
+    cache.save()
+    
+    duration = (datetime.now() - start).total_seconds()
+    if duration > 0:
+        rate = len(images) / duration
+        logging.info(f"Termine en {duration:.1f}s ({rate:.0f} img/s) - Mode Windows")
     else:
-        return {}
-
-def save_hash_cache(cache):
-    """Sauvegarde le cache des hachages dans le fichier."""
-    with open(CACHE_FILE, 'wb') as f:
-        pickle.dump(cache, f)
-
-def find_and_remove_duplicates(directory, hash_cache, num_processes):
-    # Stocker les hachages des images
-    hashes = {}
-    duplicates = []
-
-    # Récupérer tous les fichiers image du répertoire et trier par taille
-    image_files = [os.path.join(directory, f) for f in os.listdir(directory) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif'))]
-    image_files.sort(key=lambda x: os.path.getsize(x))
-
-    # Obtenir les tailles des fichiers
-    image_sizes = [os.path.getsize(f) for f in image_files]
-
-    # Calculer les hachages des images en parallèle
-    with ProcessPoolExecutor(max_workers=num_processes) as executor:
-        results = executor.map(compute_image_hash_with_cache, image_files, [hash_cache]*len(image_files))
-
-    # Traiter les résultats avec une fenêtre glissante
-    for idx, result in enumerate(results):
-        if result:
-            image_path, img_hash = result
-            image_size = image_sizes[idx]
-
-            # Fenêtre glissante : comparer avec les images de taille similaire
-            window_start = idx
-            while window_start > 0 and abs(image_sizes[window_start] - image_size) <= SIZE_THRESHOLD:
-                window_start -= 1
-            window_end = idx
-            while window_end < len(image_sizes) - 1 and abs(image_sizes[window_end] - image_size) <= SIZE_THRESHOLD:
-                window_end += 1
-
-            # Comparer avec les hachages dans la fenêtre
-            duplicate_found = False
-            for other_idx in range(window_start, window_end + 1):
-                if other_idx == idx:
-                    continue
-                other_image = image_files[other_idx]
-                other_hash = hashes.get(other_image)
-                if other_hash:
-                    # Calculer la différence de hachage
-                    if img_hash - other_hash < THRESHOLD:  # Tolère les petites différences
-                        duplicates.append((image_path, other_image))
-
-                        # Supprimer le doublon
-                        os.remove(image_path)
-                        print(f"Image en doublon supprimée : {image_path}")
-
-                        duplicate_found = True
-                        break
-
-            # Ajouter l'image et son hachage si ce n'est pas un doublon
-            if not duplicate_found:
-                hashes[image_path] = img_hash
-
-    return duplicates
-
-def compute_image_hash_with_cache(image_path, hash_cache):
-    """Calcule le hachage perceptuel d'une image en utilisant le cache."""
-    if image_path in hash_cache:
-        return (image_path, hash_cache[image_path])
-    else:
-        result = compute_image_hash(image_path)
-        if result:
-            _, img_hash = result
-            hash_cache[image_path] = img_hash
-        return result
-
-def process_all_subdirectories(root_directory, num_processes):
-    # Charger le cache des hachages
-    hash_cache = load_hash_cache()
-
-    # Récupérer tous les sous-répertoires dans l'ordre croissant
-    for dirpath, dirnames, _ in os.walk(root_directory):
-        # Trier les sous-répertoires dans l'ordre croissant
-        dirnames.sort()
-
-        # Traiter chaque répertoire
-        print(f"Traitement du répertoire : {dirpath}")
-        duplicates = find_and_remove_duplicates(dirpath, hash_cache, num_processes)
-
-        if duplicates:
-            print("\nRésumé des doublons supprimés :")
-            for dup in duplicates:
-                print(f"Image doublon supprimée : {dup[0]}")
-        else:
-            print("Aucun doublon trouvé dans ce répertoire.")
-
-    # Sauvegarder le cache des hachages
-    save_hash_cache(hash_cache)
-
-    # Afficher l'heure de fin
-    end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f"Traitement terminé le : {end_time}")
+        logging.info("Termine instantanement")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Supprimer les images en doublon dans un répertoire donné.")
-    parser.add_argument(
-        "--directory",
-        type=str,
-        default=r"T:\_SELECT\_READY\KOWLOON GENERIC ROMANCE",
-        help="Le chemin du répertoire contenant les fichiers à traiter."
-    )
-
-    args = parser.parse_args()
-
-    # Définir l'affinité des cœurs CPU et obtenir le nombre de processus
-    num_processes = set_cpu_affinity()
-
-    # Appeler la fonction principale
-    process_all_subdirectories(args.directory, num_processes)
+    main()
