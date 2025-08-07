@@ -274,7 +274,7 @@ def windows_friendly_dedupe(images: list[Path], cache: TurboCache) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Dedoublonneur Windows-friendly")
     parser.add_argument("--directory", type=Path, 
-                       default=Path(r"T:\_SELECT\TODO\Kanpekiseijo"),
+                       default=Path(r"T:\_SELECT\TODO\Danjo no Yuujou wa Seiritsu suru"),
                        help="Repertoire a analyser")
     parser.add_argument("--clear-cache", action="store_true", 
                        help="Efface le cache avant de commencer")
