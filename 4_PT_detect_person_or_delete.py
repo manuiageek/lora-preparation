@@ -214,8 +214,7 @@ def main():
     parser.add_argument(
         "--directory", 
         type=str, 
-        # default=r"T:\_SELECT\TODO\Kanpekiseijo\10", 
-        default=r"T:\_SELECT\TODO\Danjo no Yuujou wa Seiritsu suru", 
+        default=r"T:\_SELECT\TODO\Kanpekiseijo\suite", 
         help="Répertoire à traiter"
     )
     parser.add_argument(
